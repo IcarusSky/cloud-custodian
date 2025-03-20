@@ -3,7 +3,6 @@
 
 import logging
 
-from huaweicloudsdkces.v1 import DeleteAlarmRequest
 from huaweicloudsdkcore.exceptions import exceptions
 from huaweicloudsdkces.v2 import *
 
@@ -47,8 +46,9 @@ class AlarmDelete(HuaweiCloudBaseAction):
 
     def perform_action(self, resource):
         client = self.manager.get_client()
-        request = DeleteAlarmRequest(alarm_id=resource["id"])
-        response = client.delete_alarm(request)
+        request = BatchDeleteAlarmRulesRequest()
+        request.body = BatchDeleteAlarmsRequestBody(alarm_ids=resource)
+        response = client.batch_delete_alarm_rules(request)
         log.info(f"Received Job ID:{response}")
         # TODO: need to track whether the job succeed
         response = None
