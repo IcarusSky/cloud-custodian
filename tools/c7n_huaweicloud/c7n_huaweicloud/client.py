@@ -14,8 +14,8 @@ from huaweicloudsdkvpc.v2 import *
 from huaweicloudsdkvpc.v2.region.vpc_region import VpcRegion
 from huaweicloudsdktms.v1 import *
 from huaweicloudsdktms.v1.region.tms_region import TmsRegion
-from huaweicloudsdkces.v1 import *
-from huaweicloudsdkces.v1.region.ces_region import CesRegion
+from huaweicloudsdkces.v2 import *
+from huaweicloudsdkces.v2.region.ces_region import CesRegion
 
 log = logging.getLogger('custodian.huaweicloud.client')
 
@@ -75,6 +75,6 @@ class Session:
         elif service == 'evs':
             request = ListVolumesRequest()
         elif service == 'ces':
-            request = ListAlarmsRequest()
+            request = ListAlarmRulesRequest()
 
         return request

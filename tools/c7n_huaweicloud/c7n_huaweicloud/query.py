@@ -60,31 +60,6 @@ class ResourceQuery:
                 return resources
         return resources
 
-    def _pagination_start_limit(self, m, enum_op, path):
-        session = local_session(self.session_factory)
-        client = session.client(m.service)
-        start = 0
-        limit = DEFAULT_LIMIT_SIZE
-        resources = []
-        while True:
-            request = session.request(m.service)
-            request.limit = limit
-            request.start = start  # 使用 start 分页
-            response = self._invoke_client_enum(client, enum_op, request)
-
-            res = jmespath.search(
-                path,
-                eval(str(response).replace('null', 'None').replace('false', 'False').replace('true', 'True'))
-            )
-            if res is not None:
-                for data in res:
-                    data['alarm_id'] = data[m.id]
-            resources += res
-            if len(res) < limit:
-                break
-            start += limit
-        return resources
-
     def _invoke_client_enum(self, client, enum_op, request):
         return getattr(client, enum_op)(request)
 
