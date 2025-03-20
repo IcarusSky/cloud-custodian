@@ -47,7 +47,7 @@ class AlarmDelete(HuaweiCloudBaseAction):
     def perform_action(self, resource):
         client = self.manager.get_client()
         request = BatchDeleteAlarmRulesRequest()
-        request.body = BatchDeleteAlarmsRequestBody(alarm_ids=resource)
+        request.body = BatchDeleteAlarmsRequestBody(alarm_ids=resource["id"])
         response = client.batch_delete_alarm_rules(request)
         log.info(f"Received Job ID:{response}")
         # TODO: need to track whether the job succeed
