@@ -19,7 +19,7 @@ log = logging.getLogger("custodian.huaweicloud.resources.alarm")
 class Alarm(QueryResourceManager):
     class resource_type(TypeInfo):
         service = 'ces'
-        enum_spec = ("list_alarms", 'metric_alarms', 'offset')
+        enum_spec = ("list_alarm_rules", 'alarms', 'offset')
         id = 'alarm_id'
         tag = True
 
