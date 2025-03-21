@@ -270,123 +270,127 @@ policies:
 
     def perform_action(self, resource):
         response = None
-        params = self.data.get('parameters', {})
-        action_type = params.get('action_type', 'notification')
-        # 告警更新切换到V1接口
-        client = self.manager.get_client()
-        request = CreateAlarmRulesRequest()
+        log.info(f"resource: {resource}")
+        if resource["id"] == "":
+            params = self.data.get('parameters', {})
+            action_type = params.get('action_type', 'notification')
+            # 告警更新切换到V1接口
+            client = self.manager.get_client()
+            request = CreateAlarmRulesRequest()
 
-        list_ok_notifications_body = [
-            Notification(
-                type=action_type,
-                notification_list=params['notification_list']
+            list_ok_notifications_body = [
+                Notification(
+                    type=action_type,
+                    notification_list=params['notification_list']
+                )
+            ]
+            list_alarm_notifications_body = [
+                Notification(
+                    type=action_type,
+                    notification_list=params['notification_list']
+                )
+            ]
+            list_policies_body = [
+                Policy(
+                    metric_name="deleteVpc",
+                    period=0,
+                    filter="average",
+                    comparison_operator=">=",
+                    value=1,
+                    unit="count",
+                    count=1,
+                    suppress_duration=0,
+                    level=2
+                ),
+                Policy(
+                    metric_name="modifyVpn",
+                    period=0,
+                    filter="average",
+                    comparison_operator=">=",
+                    value=1,
+                    unit="count",
+                    count=1,
+                    suppress_duration=0,
+                    level=2
+                ),
+                Policy(
+                    metric_name="deleteVpn",
+                    period=0,
+                    filter="average",
+                    comparison_operator=">=",
+                    value=1,
+                    unit="count",
+                    count=1,
+                    suppress_duration=0,
+                    level=2
+                ),
+                Policy(
+                    metric_name="modifyVpc",
+                    period=0,
+                    filter="average",
+                    comparison_operator=">=",
+                    value=1,
+                    unit="count",
+                    count=1,
+                    suppress_duration=0,
+                    level=2
+                ),
+                Policy(
+                    metric_name="deleteSubnet",
+                    period=0,
+                    filter="average",
+                    comparison_operator=">=",
+                    value=1,
+                    unit="count",
+                    count=1,
+                    suppress_duration=0,
+                    level=2
+                ),
+                Policy(
+                    metric_name="modifySubnet",
+                    period=0,
+                    filter="average",
+                    comparison_operator=">=",
+                    value=1,
+                    unit="count",
+                    count=1,
+                    suppress_duration=0,
+                    level=2
+                ),
+                Policy(
+                    metric_name="modifyBandwidth",
+                    period=0,
+                    filter="average",
+                    comparison_operator=">=",
+                    value=1,
+                    unit="count",
+                    count=1,
+                    suppress_duration=0,
+                    level=2
+                )
+            ]
+            request.body = PostAlarmsReqV2(
+                notification_enabled=True,
+                enabled=True,
+                enterprise_project_id="0",
+                notification_end_time="23:59",
+                notification_begin_time="00:00",
+                ok_notifications=list_ok_notifications_body,
+                alarm_notifications=list_alarm_notifications_body,
+                type=AlarmType.EVENT_SYS,
+                policies=list_policies_body,
+                namespace="SYS.VPC",
+                description="alarm-vpc-change",
+                name="alarm-vpc-change",
+                resources=[]
             )
-        ]
-        list_alarm_notifications_body = [
-            Notification(
-                type=action_type,
-                notification_list=params['notification_list']
-            )
-        ]
-        list_policies_body = [
-            Policy(
-                metric_name="deleteVpc",
-                period=0,
-                filter="average",
-                comparison_operator=">=",
-                value=1,
-                unit="count",
-                count=1,
-                suppress_duration=0,
-                level=2
-            ),
-            Policy(
-                metric_name="modifyVpn",
-                period=0,
-                filter="average",
-                comparison_operator=">=",
-                value=1,
-                unit="count",
-                count=1,
-                suppress_duration=0,
-                level=2
-            ),
-            Policy(
-                metric_name="deleteVpn",
-                period=0,
-                filter="average",
-                comparison_operator=">=",
-                value=1,
-                unit="count",
-                count=1,
-                suppress_duration=0,
-                level=2
-            ),
-            Policy(
-                metric_name="modifyVpc",
-                period=0,
-                filter="average",
-                comparison_operator=">=",
-                value=1,
-                unit="count",
-                count=1,
-                suppress_duration=0,
-                level=2
-            ),
-            Policy(
-                metric_name="deleteSubnet",
-                period=0,
-                filter="average",
-                comparison_operator=">=",
-                value=1,
-                unit="count",
-                count=1,
-                suppress_duration=0,
-                level=2
-            ),
-            Policy(
-                metric_name="modifySubnet",
-                period=0,
-                filter="average",
-                comparison_operator=">=",
-                value=1,
-                unit="count",
-                count=1,
-                suppress_duration=0,
-                level=2
-            ),
-            Policy(
-                metric_name="modifyBandwidth",
-                period=0,
-                filter="average",
-                comparison_operator=">=",
-                value=1,
-                unit="count",
-                count=1,
-                suppress_duration=0,
-                level=2
-            )
-        ]
-        request.body = PostAlarmsReqV2(
-            notification_enabled=True,
-            enabled=True,
-            enterprise_project_id="0",
-            notification_end_time="23:59",
-            notification_begin_time="00:00",
-            ok_notifications=list_ok_notifications_body,
-            alarm_notifications=list_alarm_notifications_body,
-            type=AlarmType.EVENT_SYS,
-            policies=list_policies_body,
-            namespace="SYS.VPC",
-            description="alarm-vpc-change",
-            name="alarm-vpc-change",
-            resources=[]
-        )
-        try:
-            response = client.create_alarm_rules(request)
-            log.info(f"Create alarm {response}")
-        except exceptions.ClientRequestException as e:
-            log.error(f"Create alarm failed: {e.error_msg}")
+            try:
+                response = client.create_alarm_rules(request)
+                log.info(f"Create alarm {response}")
+            except exceptions.ClientRequestException as e:
+                log.error(f"Create alarm failed: {e.error_msg}")
+        else:
+            log.info(f"Has already config vpc event alarm")
         return response
 
 # @Alarm.action_registry.register('notify')
