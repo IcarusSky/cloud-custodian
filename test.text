@@ -1,0 +1,661 @@
+1.1确保所有 CES 告警关联 SMN 主题
+解释：通过检查AlarmActions字段，自动为未关联 SMN 主题的告警规则添加默认通知主题，确保所有告警事件都能通过 SMN 及时通知到运维团队。
+
+yaml
+policies:
+- name: ces-alarms-have-smn
+  description: "验证所有告警规则已关联SMN通知"
+  resource: huaweicloud.ces.alarm
+  filters:
+    - type: value
+      key: notification_enabled
+      value: false
+  actions:
+    - type: update-alarm
+      parameters:
+        alarm_actions: ["urn:smn:cn-north-4:e196f2790965422f80502748f4d58649:CES_notification_group_kNrnzmm0J"]
+
+policies:
+  - name: enable-smn-notification
+	resource: huaweicloud.alarm
+	flters:
+	  - type: value
+		key: alarm_action_enabled
+		value: false
+	actions:
+	  - type: ces-alarm-have-smn
+		parameters:
+		  action_type: "notification"
+		  notification_list:
+			- "urn:smn:cn-north-4:xxxxxxxxxxx:ces_notification_group_xxxxx"
+------------------
+        request = UpdateAlarmRequest()
+        listNotificationListOkActions = [
+            "urn:smn:cn-north-4:e196f2790965422f80502748f4d58649:CES_notification_group_kNrnzmm0J"
+        ]
+        listOkActionsbody = [
+            AlarmActions(
+                type="notification",
+                notification_list=listNotificationListOkActions
+            )
+        ]
+        listNotificationListAlarmActions = [
+            "urn:smn:cn-north-4:e196f2790965422f80502748f4d58649:CES_notification_group_kNrnzmm0J"
+        ]
+        listAlarmActionsbody = [
+            AlarmActions(
+                type="notification",
+                notification_list=listNotificationListAlarmActions
+            )
+        ]
+        request.body = UpdateAlarmRequestBody(
+            ok_actions=listOkActionsbody,
+            alarm_actions=listAlarmActionsbody,
+            alarm_action_enabled=True
+        )
+        response = client.update_alarm(request)
+
+-------------------
+
+1.2清理未使用的 CES 告警
+解释：识别 30 天内未触发且状态为 OK 的冗余告警规则，自动删除这些无效配置，降低监控维护成本并提高规则有效性。
+yaml
+policies:
+- name: ces-cleanup-stale-alarms
+  description: "删除30天未触发的告警规则"
+  resource: huaweicloud.ces.alarm
+  filters:
+    - type: age
+      days: 30
+      key: StateChangeTime
+    - type: value
+      key: StateValue
+      value: OK
+  actions:
+    - type: delete
+
+
+
+
+1.3 alarm-action-enabled-check
+解释：所有CES告警必须确保是开启状态，若有任务处于未开启状态，则标记为“不合规”
+yaml
+policies:
+- name: ensure-alarm-enabled-check
+  resource: huaweicloud.ces.alarm
+  filters:
+    - type: value
+      key: alarm_enabled
+      value: false
+      op: eq
+  actions:
+    - type: notify
+      to:
+        - security@example.com
+      subject: "Unverified CES Alarm"
+      message: "CES alarm {alarm_id} is not started. Please verify the configuration."
+
+
+1.4 alarm-kms-disable-or-delete-key
+解释：CES必须配置监控KMS禁用或计划删除密钥的事件监控告警，若未配置，则标记为“不合规”
+policies:
+- name: alarm-kms-disable-or-delete-key
+  resource: huaweicloud.ces.alarm
+  filters:
+    - type: value
+      key: namespace
+      value: SYS.KMS
+      op: eq
+    - type: value
+      key: policies.metric_name
+      value: scheduleKeyDeletion
+      op: eq
+    - type: value
+      key: policies.metric_name
+      value: disableKey
+      op: eq
+  actions:
+    - type: notify
+      to:
+        - security@example.com
+      subject: "Unverified CES Alarm"
+      message: "The rule is noncompliant if an CES alarm for disabling or scheduled deletion of KMS keys does not exist. Please verify the configuration."
+
+1.5 alarm-obs-bucket-policy-change
+解释：CES未配置监控OBS桶策略变更的事件监控告警，视为“不合规”
+policies:
+- name: alarm-obs-bucket-policy-change
+  resource: huaweicloud.ces.alarm
+  filters:
+    - type: value
+      key: namespace
+      value: SYS.KMS
+      op: eq
+    - type: value
+      key: policies.metric_name
+      value: setBucketPolicy
+      op: eq
+    - type: value
+      key: policies.metric_name
+      value: deleteBucket
+      op: eq
+  actions:
+    - type: notify
+      to:
+        - security@example.com
+      subject: "Unverified CES Alarm"
+      message: "The rule is noncompliant if an CES alarm for OBS bucket policy changes does not exist."
+	  
+1.6 alarm-resource-check
+解释：指定的资源类型没有绑定指定指标CES告警，视为“不合规”
+policies:
+- name: alarm-resource-check
+  resource: huaweicloud.ces.alarm
+  filters:
+    - type: value
+      key: namespace
+      value: SYS.KMS
+      op: eq
+    - type: value
+      key: policies.metric_name
+      value: setBucketPolicy
+      op: eq
+    - type: value
+      key: policies.metric_name
+      value: deleteBucket
+      op: eq
+  actions:
+    - type: notify
+      to:
+        - security@example.com
+      subject: "Unverified CES Alarm"
+      message: "A CES alarm is noncompliant if alarms are not configured with specified resource type with specified metric name."
+
+
+1.7 alarm-settings-check
+解释：CES未配置监控VPC变更的事件监控告警，视为“不合规”
+policies:
+- name: alarm-vpc-change
+  resource: huaweicloud.ces.alarm
+  filters:
+    - type: value
+      key: alarm_enabled
+      value: true
+      op: eq
+    - type: value
+      key: alarm_type
+      value: EVENT.SYS
+      op: eq
+    - type: value
+      key: namespace
+      value: SYS.VPC
+      op: eq
+    - type: value
+      key: policies.metric_name
+      value: setBucketPolicy
+      op: eq
+    - type: value
+      key: policies.metric_name
+      value: deleteBucket
+      op: eq
+  actions:
+    - type: notify
+      to:
+        - security@example.com
+      subject: "Unverified CES Alarm"
+      message: "The rule is noncompliant if an CES alarm for VPC changes does not exist."
+
+1.8 alarm-vpc-change
+解释：CES未配置监控VPC变更的事件监控告警，视为“不合规”
+policies:
+- name: alarm-vpc-change
+  resource: huaweicloud.ces.alarm
+  filters:
+    - type: value
+      key: alarm_enabled
+      value: true
+      op: eq
+    - type: value
+      key: alarm_type
+      value: EVENT.SYS
+      op: eq
+    - type: value
+      key: namespace
+      value: SYS.VPC
+      op: eq
+    - type: value
+      key: policies.metric_name
+      value: setBucketPolicy
+      op: eq
+    - type: value
+      key: policies.metric_name
+      value: deleteBucket
+      op: eq
+  actions:
+    - type: notify
+      to:
+        - security@example.com
+      subject: "Unverified CES Alarm"
+      message: "The rule is noncompliant if an CES alarm for VPC changes does not exist."
+
+
+
+alarm-vpc-change
+检查CES的所有告警，判断是否配置了“修改VPC”的告警，若创建视为“合规”，否则视为“不合规”。
+
+创建"VPC变动"事件对应告警
+{
+    "alarm_name": "alarm-vpc-change",
+    "alarm_description": "alarm-vpc-change",
+    "alarm_enabled": true,
+    "composite_operator": "DEFAULT",
+    "namespace": "SYS.VPC",
+    "alarm_type": "EVENT.SYS",
+    "enterprise_project_id": "0",
+    "resources": [],
+    "policies": [
+        {
+            "metric_name": "deleteVpc",
+            "filter": "average",
+            "period": 0,
+            "count": 1,
+            "value": 1,
+            "unit": "count",
+            "comparison_operator": ">=",
+            "suppress_duration": 0,
+            "alarm_level": 2
+        },
+        {
+            "metric_name": "modifyVpn",
+            "filter": "average",
+            "period": 0,
+            "count": 1,
+            "value": 1,
+            "unit": "count",
+            "comparison_operator": ">=",
+            "suppress_duration": 0,
+            "alarm_level": 2
+        },
+        {
+            "metric_name": "deleteVpn",
+            "filter": "average",
+            "period": 0,
+            "count": 1,
+            "value": 1,
+            "unit": "count",
+            "comparison_operator": ">=",
+            "suppress_duration": 0,
+            "alarm_level": 2
+        },
+        {
+            "metric_name": "modifyVpc",
+            "filter": "average",
+            "period": 0,
+            "count": 1,
+            "value": 1,
+            "unit": "count",
+            "comparison_operator": ">=",
+            "suppress_duration": 0,
+            "alarm_level": 2
+        },
+        {
+            "metric_name": "deleteSubnet",
+            "filter": "average",
+            "period": 0,
+            "count": 1,
+            "value": 1,
+            "unit": "count",
+            "comparison_operator": ">=",
+            "suppress_duration": 0,
+            "alarm_level": 2
+        },
+        {
+            "metric_name": "modifySubnet",
+            "filter": "average",
+            "period": 0,
+            "count": 1,
+            "value": 1,
+            "unit": "count",
+            "comparison_operator": ">=",
+            "suppress_duration": 0,
+            "alarm_level": 2
+        },
+        {
+            "metric_name": "modifyBandwidth",
+            "filter": "average",
+            "period": 0,
+            "count": 1,
+            "value": 1,
+            "unit": "count",
+            "comparison_operator": ">=",
+            "suppress_duration": 0,
+            "alarm_level": 2
+        }
+    ],
+    "alarm_action_enabled": true,
+    "alarm_actions": [],
+    "ok_actions": [],
+    "insufficientdata_actions": [],
+    "alarm_action_begin_time": "00:00",
+    "alarm_action_end_time": "23:59",
+    "notification_manner": "NOTIFICATION_POLICY",
+    "notification_policy_ids": [
+        "np-6df0e041-a21e-4192-a63a-174f8261bdf0"
+    ],
+    "effective_timezone": "GMT+08:00",
+    "masked_resources": [],
+    "tags": []
+}
+
+创建KMS事件变动告警
+{
+    "alarm_name": "alarm-qu5f",
+    "alarm_description": "",
+    "alarm_enabled": true,
+    "composite_operator": "DEFAULT",
+    "namespace": "SYS.KMS",
+    "alarm_type": "EVENT.SYS",
+    "enterprise_project_id": "0",
+    "resources": [],
+    "policies": [
+        {
+            "metric_name": "retireGrant",
+            "filter": "average",
+            "period": 0,
+            "count": 1,
+            "value": 1,
+            "unit": "count",
+            "comparison_operator": ">=",
+            "suppress_duration": 0,
+            "alarm_level": 2
+        },
+        {
+            "metric_name": "revokeGrant",
+            "filter": "average",
+            "period": 0,
+            "count": 1,
+            "value": 1,
+            "unit": "count",
+            "comparison_operator": ">=",
+            "suppress_duration": 0,
+            "alarm_level": 2
+        },
+        {
+            "metric_name": "disableKey",
+            "filter": "average",
+            "period": 0,
+            "count": 1,
+            "value": 1,
+            "unit": "count",
+            "comparison_operator": ">=",
+            "suppress_duration": 0,
+            "alarm_level": 2
+        },
+        {
+            "metric_name": "scheduleKeyDeletion",
+            "filter": "average",
+            "period": 0,
+            "count": 1,
+            "value": 1,
+            "unit": "count",
+            "comparison_operator": ">=",
+            "suppress_duration": 0,
+            "alarm_level": 2
+        }
+    ],
+    "alarm_action_enabled": true,
+    "alarm_actions": [],
+    "ok_actions": [],
+    "insufficientdata_actions": [],
+    "alarm_action_begin_time": "00:00",
+    "alarm_action_end_time": "23:59",
+    "notification_manner": "NOTIFICATION_POLICY",
+    "notification_policy_ids": [
+        "np-6df0e041-a21e-4192-a63a-174f8261bdf0"
+    ],
+    "effective_timezone": "GMT+08:00",
+    "masked_resources": [],
+    "tags": []
+}
+
+创建OBS桶
+{
+    "alarm_name": "alarm-pqos",
+    "alarm_description": "",
+    "alarm_enabled": true,
+    "composite_operator": "DEFAULT",
+    "namespace": "SYS.OBS",
+    "alarm_type": "EVENT.SYS",
+    "enterprise_project_id": "0",
+    "resources": [],
+    "policies": [
+        {
+            "metric_name": "setBucketPolicy",
+            "filter": "average",
+            "period": 0,
+            "count": 1,
+            "value": 1,
+            "unit": "count",
+            "comparison_operator": ">=",
+            "suppress_duration": 0,
+            "alarm_level": 2
+        },
+        {
+            "metric_name": "setBucketAcl",
+            "filter": "average",
+            "period": 0,
+            "count": 1,
+            "value": 1,
+            "unit": "count",
+            "comparison_operator": ">=",
+            "suppress_duration": 0,
+            "alarm_level": 2
+        },
+        {
+            "metric_name": "deleteBucketPolicy",
+            "filter": "average",
+            "period": 0,
+            "count": 1,
+            "value": 1,
+            "unit": "count",
+            "comparison_operator": ">=",
+            "suppress_duration": 0,
+            "alarm_level": 2
+        },
+        {
+            "metric_name": "deleteBucket",
+            "filter": "average",
+            "period": 0,
+            "count": 1,
+            "value": 1,
+            "unit": "count",
+            "comparison_operator": ">=",
+            "suppress_duration": 0,
+            "alarm_level": 2
+        }
+    ],
+    "alarm_action_enabled": true,
+    "alarm_actions": [],
+    "ok_actions": [],
+    "insufficientdata_actions": [],
+    "alarm_action_begin_time": "00:00",
+    "alarm_action_end_time": "23:59",
+    "notification_manner": "NOTIFICATION_POLICY",
+    "notification_policy_ids": [
+        "np-3b5f614c-4387-4ca7-a004-ececf5afec4d"
+    ],
+    "effective_timezone": "GMT+08:00",
+    "masked_resources": [],
+    "tags": []
+}
+
+
+
+修改告警通知
+{
+    "alarm_name": "alarm-92wt",
+    "alarm_description": "",
+    "alarm_enabled": false,
+    "composite_operator": "DEFAULT",
+    "alarm_type": "MULTI_INSTANCE",
+    "resources": [
+        [
+            {
+                "name": "topic_id",
+                "value": "b2054e52a28348688adaa2327cbdc2a6"
+            }
+        ]
+    ],
+    "policies": [
+        {
+            "metric_name": "email_total_count",
+            "filter": "average",
+            "period": 1,
+            "count": 3,
+            "hierarchical_value": {
+                "major": 0
+            },
+            "unit": "条",
+            "comparison_operator": ">=",
+            "suppress_duration": 300,
+            "namespace": "SYS.SMN",
+            "dimension_name": "topic_id"
+        }
+    ],
+    "alarm_action_enabled": true,
+    "alarm_actions": [],
+    "ok_actions": [],
+    "insufficientdata_actions": [],
+    "alarm_action_begin_time": "00:00",
+    "alarm_action_end_time": "23:59",
+    "notification_manner": "NOTIFICATION_POLICY",
+    "notification_policy_ids": [
+        "np-2329f0af-3e26-43f3-a767-f594d5d7b778"
+    ],
+    "effective_timezone": "GMT+08:00",
+    "masked_resources": [],
+    "tags": [],
+    "resource_level": "product",
+    "product_name": "SYS.SMN,topic_id"
+}
+
+{
+    "alarm_name": "alarm-92wt",
+    "alarm_description": "",
+    "alarm_enabled": false,
+    "composite_operator": "DEFAULT",
+    "alarm_type": "MULTI_INSTANCE",
+    "resources": [
+        [
+            {
+                "name": "topic_id",
+                "value": "b2054e52a28348688adaa2327cbdc2a6"
+            }
+        ]
+    ],
+    "policies": [
+        {
+            "metric_name": "email_total_count",
+            "filter": "average",
+            "period": 1,
+            "count": 3,
+            "hierarchical_value": {
+                "major": 0
+            },
+            "unit": "条",
+            "comparison_operator": ">=",
+            "suppress_duration": 300,
+            "namespace": "SYS.SMN",
+            "dimension_name": "topic_id"
+        }
+    ],
+    "alarm_action_enabled": true,
+    "alarm_actions": [
+        {
+            "type": "contact",
+            "notificationList": [
+                "ct1558614798436XlB8JyrNR"
+            ]
+        }
+    ],
+    "ok_actions": [
+        {
+            "type": "contact",
+            "notificationList": [
+                "ct1558614798436XlB8JyrNR"
+            ]
+        }
+    ],
+    "insufficientdata_actions": [],
+    "alarm_action_begin_time": "00:00",
+    "alarm_action_end_time": "23:59",
+    "effective_timezone": "GMT+08:00",
+    "masked_resources": [],
+    "tags": [],
+    "resource_level": "product",
+    "product_name": "SYS.SMN,topic_id"
+}
+
+{
+    "alarm_name": "alarm-85lp",
+    "alarm_description": "",
+    "alarm_enabled": false,
+    "composite_operator": "DEFAULT",
+    "alarm_type": "ALL_INSTANCE",
+    "resources": [
+        [
+            {
+                "name": "instance_id"
+            }
+        ]
+    ],
+    "policies": [
+        {
+            "metric_name": "cpu_usage",
+            "filter": "average",
+            "period": 1,
+            "count": 1,
+            "hierarchical_value": {
+                "major": 0
+            },
+            "unit": "%",
+            "comparison_operator": ">=",
+            "suppress_duration": 86400,
+            "namespace": "AGT.ECS",
+            "dimension_name": "instance_id"
+        }
+    ],
+    "alarm_action_enabled": true,
+    "alarm_actions": [
+        {
+            "type": "notification",
+            "notificationList": [
+                "urn:smn:cn-north-4:e196f2790965422f80502748f4d58649:CES_notification_group_kNrnzmm0J"
+            ]
+        }
+    ],
+    "ok_actions": [
+        {
+            "type": "notification",
+            "notificationList": [
+                "urn:smn:cn-north-4:e196f2790965422f80502748f4d58649:CES_notification_group_kNrnzmm0J"
+            ]
+        }
+    ],
+    "insufficientdata_actions": [],
+    "alarm_action_begin_time": "00:00",
+    "alarm_action_end_time": "23:59",
+    "masked_resources": [
+        {
+            "dimensions": [
+                {
+                    "name": "instance_id",
+                    "value": "40860ff6-6a52-4782-9305-3beafe9b1f30"
+                }
+            ]
+        }
+    ],
+    "tags": [],
+    "resource_level": "product",
+    "product_name": "SYS.ECS,instance_id"
+}
