@@ -112,6 +112,7 @@ class AlarmUpdate(HuaweiCloudBaseAction):
         self.manager.resource_type.service = 'cesv1'
         client = self.manager.get_client()
         request = UpdateAlarmRequest()
+        request.alarm_id = resource["id"]
         listOkActionsbody = [
             AlarmActions(
                 type=action_type,
