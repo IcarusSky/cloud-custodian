@@ -60,8 +60,9 @@ class AlarmDelete(HuaweiCloudBaseAction):
             log.error(f"Delete failed: {e.error_msg}")
         return response
 
+
 @Alarm.action_registry.register("ces-alarm-have-smn")
-class AlarmUpdate(HuaweiCloudBaseAction):
+class AlarmUpdateNotification(HuaweiCloudBaseAction):
     """Update CES Alarm notification settings.
 
     :Example:
@@ -87,54 +88,94 @@ class AlarmUpdate(HuaweiCloudBaseAction):
     schema = type_schema(
         "ces-alarm-have-smn",
         required=["parameters"],
-        ** {
-        "parameters": {
-            "type": "object",
-            "required": ["notification_list", "action_type"],
-            "properties": {
-                "notification_list": {
-                    "type": "array",
-                    "items": {"type": "string"}
-                },
-                "action_type": {
-                    "type": "string",
-                    "enum": ["notification", "autoscaling"]
+        **{
+            "parameters": {
+                "type": "object",
+                "required": ["notification_list", "action_type"],
+                "properties": {
+                    "notification_list": {
+                        "type": "array",
+                        "items": {"type": "string"}
+                    },
+                    "action_type": {
+                        "type": "string",
+                        "enum": ["notification", "autoscaling"]
+                    }
                 }
             }
         }
-    }
     )
 
     def perform_action(self, resource):
         params = self.data.get('parameters', {})
         action_type = params.get('action_type', 'notification')
         response = None
+        # 告警更新切换到V1接口
         self.manager.resource_type.service = 'cesv1'
         client = self.manager.get_client()
         request = UpdateAlarmRequest()
         request.alarm_id = resource["id"]
-        listOkActionsbody = [
+        list_ok_actions_body = [
             AlarmActions(
                 type=action_type,
                 notification_list=params['notification_list']
             )
         ]
-        listAlarmActionsbody = [
+        list_alarm_actions_body = [
             AlarmActions(
                 type="notification",
                 notification_list=params['notification_list']
             )
         ]
         request.body = UpdateAlarmRequestBody(
-            ok_actions=listOkActionsbody,
-            alarm_actions=listAlarmActionsbody,
+            ok_actions=list_ok_actions_body,
+            alarm_actions=list_alarm_actions_body,
             alarm_action_enabled=True
         )
         try:
             response = client.update_alarm(request)
-            log.info(f"Deleted alarm {response}")
+            log.info(f"Update alarm notification {response}")
         except exceptions.ClientRequestException as e:
-            log.error(f"Delete failed: {e.error_msg}")
+            log.error(f"Update alarm notification failed: {e.error_msg}")
+        return response
+
+
+@Alarm.action_registry.register("alarm-action-enabled-check")
+class AlarmUpdateEnabled(HuaweiCloudBaseAction):
+    """Update CES Alarm all start.
+
+    :Example:
+
+    .. code-block:: yaml
+
+        policies:
+          - name: enable-smn-notification
+            resource: huaweicloud.alarm
+            filters:
+              - type: value
+                key: alarm_enabled
+                value: false
+            actions:
+              - type: alarm-action-enabled-check
+
+    """
+
+    schema = type_schema("alarm-action-enabled-check")
+
+    def perform_action(self, resource):
+        response = None
+        client = self.manager.get_client()
+        request = BatchEnableAlarmRulesRequest()
+        list_alarm_ids = [resource["id"]]
+        request.body = BatchEnableAlarmsRequestBody(
+            alarm_enabled=True,
+            alarm_ids=list_alarm_ids
+        )
+        try:
+            response = client.batch_enable_alarm_rules(request)
+            log.info(f"Batch start alarm {response}")
+        except exceptions.ClientRequestException as e:
+            log.error(f"Batch start alarm failed: {e.error_msg}")
         return response
 
 # @Alarm.action_registry.register('notify')
