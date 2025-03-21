@@ -140,7 +140,7 @@ class AlarmUpdateNotification(HuaweiCloudBaseAction):
         return response
 
 
-@Alarm.action_registry.register("alarm-action-enabled-check")
+@Alarm.action_registry.register("alarm-enabled-check-and-start")
 class AlarmUpdateEnabled(HuaweiCloudBaseAction):
     """Update CES Alarm all start.
 
@@ -149,18 +149,18 @@ class AlarmUpdateEnabled(HuaweiCloudBaseAction):
     .. code-block:: yaml
 
         policies:
-          - name: enable-smn-notification
+          - name: enable-all-alarm-rule-started
             resource: huaweicloud.alarm
             filters:
               - type: value
-                key: alarm_enabled
+                key: enabled
                 value: false
             actions:
-              - type: alarm-action-enabled-check
+              - type: alarm-enabled-check-and-start
 
     """
 
-    schema = type_schema("alarm-action-enabled-check")
+    schema = type_schema("alarm-enabled-check-and-start")
 
     def perform_action(self, resource):
         response = None
@@ -176,6 +176,209 @@ class AlarmUpdateEnabled(HuaweiCloudBaseAction):
             log.info(f"Batch start alarm {response}")
         except exceptions.ClientRequestException as e:
             log.error(f"Batch start alarm failed: {e.error_msg}")
+        return response
+
+
+@Alarm.action_registry.register("alarm-vpc-check")
+class AlarmUpdateEnabled(HuaweiCloudBaseAction):
+    """Check CES isn't configured VPC change alarm rule.
+
+    :Example:
+
+    .. code-block:: yaml
+
+        policies:
+          - name: enable-all-alarm-rule-started
+            resource: huaweicloud.alarm
+            filters:
+                - type: value
+                  key: enabled
+                  value: true
+                  op: eq
+                - type: value
+                  key: alarm_type
+                  value: EVENT.SYS
+                  op: eq
+                - type: value
+                  key: namespace
+                  value: SYS.VPC
+                  op: eq
+                - type: value
+                  key: resources.dimensions
+                  value: []
+                  op: eq
+                - type: value
+                  key: policies.metric_name
+                  value: modifyVpc
+                  op: eq
+                - type: value
+                  key: policies.metric_name
+                  value: modifySubnet
+                  op: eq
+                - type: value
+                  key: policies.metric_name
+                  value: deleteSubnet
+                  op: eq
+                - type: value
+                  key: policies.metric_name
+                  value: modifyBandwidth
+                  op: eq
+                - type: value
+                  key: policies.metric_name
+                  value: deleteVpc
+                  op: eq
+                - type: value
+                  key: policies.metric_name
+                  value: deleteVpn
+                  op: eq
+            actions:
+              - type: alarm-vpc-check
+                parameters:
+                  action_type: "notification"
+                  notification_list:
+                    - "urn:smn:cn-north-4:xxxxxxxxxxx:ces_notification_group_xxxxx"
+
+    """
+
+    schema = type_schema(
+        "alarm-vpc-check",
+        required=["parameters"],
+        **{
+            "parameters": {
+                "type": "object",
+                "required": ["notification_list", "action_type"],
+                "properties": {
+                    "notification_list": {
+                        "type": "array",
+                        "items": {"type": "string"}
+                    },
+                    "action_type": {
+                        "type": "string",
+                        "enum": ["notification", "autoscaling"]
+                    }
+                }
+            }
+        }
+    )
+
+    def perform_action(self, resource):
+        response = None
+        params = self.data.get('parameters', {})
+        action_type = params.get('action_type', 'notification')
+        # 告警更新切换到V1接口
+        client = self.manager.get_client()
+        request = CreateAlarmRulesRequest()
+
+        list_ok_notifications_body = [
+            Notification(
+                type=action_type,
+                notification_list=params['notification_list']
+            )
+        ]
+        list_alarm_notifications_body = [
+            Notification(
+                type=action_type,
+                notification_list=params['notification_list']
+            )
+        ]
+        list_policies_body = [
+            Policy(
+                metric_name="deleteVpc",
+                period=0,
+                filter="average",
+                comparison_operator=">=",
+                value=1,
+                unit="count",
+                count=1,
+                suppress_duration=0,
+                level=2
+            ),
+            Policy(
+                metric_name="modifyVpn",
+                period=0,
+                filter="average",
+                comparison_operator=">=",
+                value=1,
+                unit="count",
+                count=1,
+                suppress_duration=0,
+                level=2
+            ),
+            Policy(
+                metric_name="deleteVpn",
+                period=0,
+                filter="average",
+                comparison_operator=">=",
+                value=1,
+                unit="count",
+                count=1,
+                suppress_duration=0,
+                level=2
+            ),
+            Policy(
+                metric_name="modifyVpc",
+                period=0,
+                filter="average",
+                comparison_operator=">=",
+                value=1,
+                unit="count",
+                count=1,
+                suppress_duration=0,
+                level=2
+            ),
+            Policy(
+                metric_name="deleteSubnet",
+                period=0,
+                filter="average",
+                comparison_operator=">=",
+                value=1,
+                unit="count",
+                count=1,
+                suppress_duration=0,
+                level=2
+            ),
+            Policy(
+                metric_name="modifySubnet",
+                period=0,
+                filter="average",
+                comparison_operator=">=",
+                value=1,
+                unit="count",
+                count=1,
+                suppress_duration=0,
+                level=2
+            ),
+            Policy(
+                metric_name="modifyBandwidth",
+                period=0,
+                filter="average",
+                comparison_operator=">=",
+                value=1,
+                unit="count",
+                count=1,
+                suppress_duration=0,
+                level=2
+            )
+        ]
+        request.body = PostAlarmsReqV2(
+            notification_enabled=True,
+            enabled=True,
+            enterprise_project_id="0",
+            notification_end_time="23:59",
+            notification_begin_time="00:00",
+            ok_notifications=list_ok_notifications_body,
+            alarm_notifications=list_alarm_notifications_body,
+            type=AlarmType.EVENT_SYS,
+            policies=list_policies_body,
+            namespace="SYS.VPC",
+            description="alarm-vpc-change",
+            name="alarm-vpc-change"
+        )
+        try:
+            response = client.create_alarm_rules(request)
+            log.info(f"Create alarm {response}")
+        except exceptions.ClientRequestException as e:
+            log.error(f"Create alarm failed: {e.error_msg}")
         return response
 
 # @Alarm.action_registry.register('notify')
