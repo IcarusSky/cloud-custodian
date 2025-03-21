@@ -14,8 +14,10 @@ from huaweicloudsdkvpc.v2 import *
 from huaweicloudsdkvpc.v2.region.vpc_region import VpcRegion
 from huaweicloudsdktms.v1 import *
 from huaweicloudsdktms.v1.region.tms_region import TmsRegion
-from huaweicloudsdkces.v2 import *
-from huaweicloudsdkces.v2.region.ces_region import CesRegion
+from huaweicloudsdkces.v1 import CesClient as CesV1Client
+from huaweicloudsdkces.v2 import CesClient as CesV2Client, ListAlarmRulesRequest
+from huaweicloudsdkces.v1.region.ces_region import CesRegion as CesV1Region
+from huaweicloudsdkces.v2.region.ces_region import CesRegion as CesV2Region
 
 log = logging.getLogger('custodian.huaweicloud.client')
 
@@ -61,10 +63,15 @@ class Session:
                 .with_credentials(credentials) \
                 .with_region(TmsRegion.value_of(self.region)) \
                 .build()
-        elif service == 'ces':
-            client = CesClient.new_builder() \
+        elif service == 'cesv1':
+            client = CesV1Client.new_builder() \
                 .with_credentials(credentials) \
-                .with_region(CesRegion.value_of(self.region)) \
+                .with_region(CesV1Region.value_of(self.region)) \
+                .build()
+        elif service == 'cesv2':
+            client = CesV2Client.new_builder() \
+                .with_credentials(credentials) \
+                .with_region(CesV2Region.value_of(self.region)) \
                 .build()
 
         return client
@@ -74,7 +81,9 @@ class Session:
             request = ListVpcsRequest()
         elif service == 'evs':
             request = ListVolumesRequest()
-        elif service == 'ces':
+        elif service == 'cesv1':
+            request = ListAlarmRulesRequest()
+        elif service == 'cesv2':
             request = ListAlarmRulesRequest()
 
         return request
