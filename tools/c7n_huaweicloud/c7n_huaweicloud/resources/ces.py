@@ -20,7 +20,7 @@ log = logging.getLogger("custodian.huaweicloud.resources.alarm")
 @resources.register('alarm')
 class Alarm(QueryResourceManager):
     class resource_type(TypeInfo):
-        service = 'ces'
+        service = 'cesv2'
         enum_spec = ("list_alarm_rules", 'alarms', 'offset')
         id = 'alarm_id'
         tag = True
@@ -42,10 +42,10 @@ class AlarmDelete(HuaweiCloudBaseAction):
                 key: alarm_action_enabled
                 value: true
             actions:
-              - delete
+              - delete_by_id
     """
 
-    schema = type_schema("delete")
+    schema = type_schema("delete_by_id")
 
     def perform_action(self, resource):
         response = None
@@ -71,7 +71,7 @@ class AlarmUpdate(HuaweiCloudBaseAction):
         policies:
           - name: enable-smn-notification
             resource: huaweicloud.alarm
-            flters:
+            filters:
               - type: value
                 key: alarm_action_enabled
                 value: false
@@ -109,6 +109,7 @@ class AlarmUpdate(HuaweiCloudBaseAction):
         params = self.data.get('parameters', {})
         action_type = params.get('action_type', 'notification')
         response = None
+        self.resource_type.service = 'cesv1'
         client = self.manager.get_client()
         request = UpdateAlarmRequest()
         listOkActionsbody = [
