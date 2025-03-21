@@ -187,56 +187,63 @@ class AlarmUpdateEnabled(HuaweiCloudBaseAction):
 
     .. code-block:: yaml
 
-        policies:
-          - name: enable-all-alarm-rule-started
-            resource: huaweicloud.alarm
-            filters:
-                - type: value
-                  key: enabled
-                  value: true
-                  op: eq
-                - type: value
-                  key: alarm_type
-                  value: EVENT.SYS
-                  op: eq
-                - type: value
-                  key: namespace
-                  value: SYS.VPC
-                  op: eq
-                - type: value
-                  key: resources.dimensions
-                  value: []
-                  op: eq
-                - type: value
-                  key: policies.metric_name
-                  value: modifyVpc
-                  op: eq
-                - type: value
-                  key: policies.metric_name
-                  value: modifySubnet
-                  op: eq
-                - type: value
-                  key: policies.metric_name
-                  value: deleteSubnet
-                  op: eq
-                - type: value
-                  key: policies.metric_name
-                  value: modifyBandwidth
-                  op: eq
-                - type: value
-                  key: policies.metric_name
-                  value: deleteVpc
-                  op: eq
-                - type: value
-                  key: policies.metric_name
-                  value: deleteVpn
-                  op: eq
-            actions:
-              - type: alarm-vpc-check
-                parameters:
-                  action_type: "notification"
-                  notification_list:
-                    - "urn:smn:cn-north-4:xxxxxxxxxxx:ces_notification_group_xxxxx"
+policies:
+  - name: enable-all-alarm-rule-started
+    resource: huaweicloud.alarm
+    filters:
+        - type: value
+          key: enabled
+          value: true
+          op: eq
+        - type: value
+          key: type
+          value: "EVENT.SYS"
+          op: eq
+        - type: value
+          key: namespace
+          value: "SYS.VPC"
+          op: eq
+        - type: list-item
+          key: resources
+          attrs:
+            - type: value
+              key: "dimensions"
+              value: []
+              op: eq
+        - type: value
+          key: "contains(policies[].metric_name, 'modifyVpc')"
+          value: true
+          op: eq
+        - type: value
+          key: "contains(policies[].metric_name, 'modifySubnet')"
+          value: true
+          op: eq
+        - type: value
+          key: "contains(policies[].metric_name, 'deleteSubnet')"
+          value: true
+          op: eq
+        - type: value
+          key: "contains(policies[].metric_name, 'modifyBandwidth')"
+          value: true
+          op: eq
+        - type: value
+          key: "contains(policies[].metric_name, 'deleteVpn')"
+          value: true
+          op: eq
+        - type: value
+          key: "contains(policies[].metric_name, 'modifyVpc')"
+          value: true
+          op: eq
+        - type: value
+          key: "contains(policies[].metric_name, 'modifyVpn')"
+          value: true
+          op: eq
+    actions:
+      - type: alarm-vpc-check
+        parameters:
+          action_type: "notification"
+          notification_list:
+            - "urn:smn:cn-north-4:e196f2790965422f80502748f4d58649:CES_notification_group_kNrnzmm0J"
 
     """
 
@@ -372,7 +379,8 @@ class AlarmUpdateEnabled(HuaweiCloudBaseAction):
             policies=list_policies_body,
             namespace="SYS.VPC",
             description="alarm-vpc-change",
-            name="alarm-vpc-change"
+            name="alarm-vpc-change",
+            resources=[]
         )
         try:
             response = client.create_alarm_rules(request)
