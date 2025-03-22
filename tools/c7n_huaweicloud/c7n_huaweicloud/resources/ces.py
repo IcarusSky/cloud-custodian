@@ -100,7 +100,7 @@ class AlarmUpdateNotification(HuaweiCloudBaseAction):
                     },
                     "action_type": {
                         "type": "string",
-                        "enum": ["notification", "autoscaling"]
+                        "enum": ["notification"]
                     }
                 }
             }
@@ -266,7 +266,7 @@ policies:
                     },
                     "action_type": {
                         "type": "string",
-                        "enum": ["notification", "autoscaling"]
+                        "enum": ["notification"]
                     }
                 }
             }
@@ -465,7 +465,7 @@ policies:
                     },
                     "action_type": {
                         "type": "string",
-                        "enum": ["notification", "autoscaling"]
+                        "enum": ["notification"]
                     }
                 }
             }
