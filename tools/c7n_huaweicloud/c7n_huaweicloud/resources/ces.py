@@ -531,6 +531,7 @@ policies:
         except exceptions.ClientRequestException as e:
             log.error(f"Create alarm failed: {e.error_msg}")
 
+
 @Alarm.action_registry.register("notify-by-smn")
 class NotifyBySMN(BaseAction):
     """Notify user by huawei cloud SMN.
@@ -551,6 +552,9 @@ policies:
               - type: alarm-namespace-metric
                 namespaces: ["SYS.KMS"]
                 metric_names: ["retireGrant", "disableKey"]
+                count: [1, 2, 3, 4, 5, 10, 15, 30, 60, 90, 120, 180]
+                period: [0, 1, 300, 1200, 3600, 14400, 86400]
+                comparison_operator: ['>', '>=', '=', '!=', '<', '<=', 'cycle_decrease', 'cycle_increase', 'cycle_wave']
     actions:
       - type: notify-by-smn
         parameters:
