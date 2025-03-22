@@ -157,6 +157,8 @@ policies:
     )
 
     def process(self, resources):
+        if len(resources) == 0:
+            return
         response = None
         batch_enable_alarm_rule_request = BatchEnableAlarmRulesRequest()
         list_alarm_ids = [str(item["id"]) for item in resources if "id" in item]
@@ -178,14 +180,14 @@ policies:
         try:
             self.manager.resource_type.service = 'cesv2'
             client = self.manager.get_client()
-            response = client.batch_enable_alarm_rules(batch_enable_alarm_rule_request)
-            #log.info(f"Batch start alarm, response: {response}")
+            batch_enable_alarm_rule_response = client.batch_enable_alarm_rules(batch_enable_alarm_rule_request)
+            log.info(f"Batch start alarm, response: {batch_enable_alarm_rule_response}")
             self.manager.resource_type.service = 'smn'
             client = self.manager.get_client()
             for topic_urn in params['notification_list']:
                 publish_message_request.topic_urn = topic_urn,
-                response = client.publish_message(publish_message_request)
-                log.info(f"Message send, response: {response}")
+                publish_message_response = client.publish_message(publish_message_request)
+                log.info(f"Message send, response: {publish_message_response}")
         except exceptions.ClientRequestException as e:
             log.error(f"Batch start alarm failed: {e.error_msg}")
         return response
