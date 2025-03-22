@@ -113,7 +113,7 @@ policies:
 
 
 @Alarm.action_registry.register("batch-start-stopped-alarm-rules")
-class BatchStartStoppedAlarmRules(HuaweiCloudBaseAction):
+class BatchStartStoppedAlarmRules(BaseAction):
     """Update CES Alarm all start.
 
     :Example:
@@ -157,11 +157,10 @@ policies:
         }
     )
 
-    def perform_action(self, resource):
+    def process(self, resources):
         response = None
-        client = self.manager.get_client()
         batch_enable_alarm_rule_request = BatchEnableAlarmRulesRequest()
-        list_alarm_ids = [resource["id"]]
+        list_alarm_ids = [str(item["id"]) for item in resources if "id" in item]
         batch_enable_alarm_rule_request.body = BatchEnableAlarmsRequestBody(
             alarm_enabled=True,
             alarm_ids=list_alarm_ids
@@ -178,6 +177,8 @@ policies:
             message=message
         )
         try:
+            self.manager.resource_type.service = 'ces'
+            client = self.manager.get_client()
             response = client.batch_enable_alarm_rules(batch_enable_alarm_rule_request)
             log.info(f"Batch start alarm, response: {response}")
             self.manager.resource_type.service = 'smn'
