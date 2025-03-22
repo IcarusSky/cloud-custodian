@@ -139,23 +139,7 @@ policies:
     """
 
     schema = type_schema(
-        "batch-start-stopped-alarm-rules",
-        required=["parameters"],
-        **{
-            "type": {"enum": ["batch-start-stopped-alarm-rules"]},
-            "parameters": {
-                "type": "object",
-                "required": ["notification_list", "subject", "message"],
-                "properties": {
-                    "notification_list": {
-                        "type": "array",
-                        "items": {"type": "string"}
-                    },
-                    "subject": {"type": "string"},
-                    "message": {"type": "string"}
-                }
-            }
-        }
+        "batch-start-stopped-alarm-rules"
     )
 
     def perform_action(self, resource):
