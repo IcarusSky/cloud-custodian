@@ -27,7 +27,7 @@ class Alarm(QueryResourceManager):
         tag = True
 Alarm.filter_registry.register('missing', Missing)
 
-@Alarm.action_registry.register("delete_by_id")
+@Alarm.action_registry.register("delete-alarm-by-id")
 class AlarmDelete(HuaweiCloudBaseAction):
     """Deletes CES Alarm.
 
@@ -43,10 +43,10 @@ class AlarmDelete(HuaweiCloudBaseAction):
                 key: alarm_action_enabled
                 value: true
             actions:
-              - delete_by_id
+              - delete-alarm-by-id
     """
 
-    schema = type_schema("delete_by_id")
+    schema = type_schema("delete-alarm-by-id")
 
     def perform_action(self, resource):
         response = None
@@ -62,7 +62,7 @@ class AlarmDelete(HuaweiCloudBaseAction):
         return response
 
 
-@Alarm.action_registry.register("ces-alarm-have-smn")
+@Alarm.action_registry.register("alarm-update-notification")
 class AlarmUpdateNotification(HuaweiCloudBaseAction):
     """Update CES Alarm notification settings.
 
@@ -71,14 +71,14 @@ class AlarmUpdateNotification(HuaweiCloudBaseAction):
     .. code-block:: yaml
 
         policies:
-          - name: enable-smn-notification
+          - name: ces-alarm-have-smn-check
             resource: huaweicloud.alarm
             filters:
               - type: value
                 key: alarm_action_enabled
                 value: false
             actions:
-              - type: ces-alarm-have-smn
+              - type: alarm-update-notification
                 parameters:
                   action_type: "notification"
                   notification_list:
@@ -87,7 +87,7 @@ class AlarmUpdateNotification(HuaweiCloudBaseAction):
     """
 
     schema = type_schema(
-        "ces-alarm-have-smn",
+        "alarm-update-notification",
         required=["parameters"],
         **{
             "parameters": {
