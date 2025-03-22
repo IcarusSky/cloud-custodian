@@ -18,6 +18,8 @@ from huaweicloudsdkces.v1 import CesClient as CesV1Client
 from huaweicloudsdkces.v2 import CesClient as CesV2Client, ListAlarmRulesRequest
 from huaweicloudsdkces.v1.region.ces_region import CesRegion as CesV1Region
 from huaweicloudsdkces.v2.region.ces_region import CesRegion as CesV2Region
+from huaweicloudsdksmn.v2 import SmnClient
+from huaweicloudsdksmn.v2.region.smn_region import SmnRegion
 
 log = logging.getLogger('custodian.huaweicloud.client')
 
@@ -72,6 +74,11 @@ class Session:
             client = CesV2Client.new_builder() \
                 .with_credentials(credentials) \
                 .with_region(CesV2Region.value_of(self.region)) \
+                .build()
+        elif service == 'smn':
+            client = SmnClient.new_builder() \
+                .with_credentials(credentials) \
+                .with_region(SmnRegion.value_of(self.region)) \
                 .build()
 
         return client
