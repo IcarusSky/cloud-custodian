@@ -8,7 +8,7 @@ from huaweicloudsdkces.v1 import *
 from huaweicloudsdkcore.exceptions import exceptions
 from huaweicloudsdkces.v2 import *
 
-from c7n.actions import Notify, ActionRegistry
+from c7n.actions import Notify, ActionRegistry, BaseAction
 from c7n.filters.missing import Missing
 from c7n.filters import Filter, FilterRegistry, ValueFilter
 from c7n.utils import type_schema
@@ -142,7 +142,7 @@ class AlarmUpdateNotification(HuaweiCloudBaseAction):
 
 
 @Alarm.action_registry.register("alarm-enabled-check-and-start")
-class AlarmUpdateEnabled(HuaweiCloudBaseAction):
+class BatchStartStoppedAlarmRules(HuaweiCloudBaseAction):
     """Update CES Alarm all start.
 
     :Example:
@@ -180,8 +180,8 @@ class AlarmUpdateEnabled(HuaweiCloudBaseAction):
         return response
 
 
-@Alarm.action_registry.register("alarm-vpc-check")
-class AlarmUpdateEnabled(HuaweiCloudBaseAction):
+@Alarm.action_registry.register("create-vpc-event-alarm-rule")
+class CreateVpcEventAlarmRule(BaseAction):
     """Check CES isn't configured VPC change alarm rule.
 
     :Example:
@@ -189,7 +189,7 @@ class AlarmUpdateEnabled(HuaweiCloudBaseAction):
     .. code-block:: yaml
 
 policies:
-  - name: enable-all-alarm-rule-started
+  - name: alarm-vpc-check
     resource: huaweicloud.alarm
     filters:
         - type: missing
@@ -244,7 +244,7 @@ policies:
                 value: true
                 op: eq
     actions:
-      - type: alarm-vpc-check
+      - type: create-vpc-event-alarm-rule
         parameters:
           action_type: "notification"
           notification_list:
@@ -253,7 +253,7 @@ policies:
     """
 
     schema = type_schema(
-        "alarm-vpc-check",
+        "create-vpc-event-alarm-rule",
         required=["parameters"],
         **{
             "parameters": {
@@ -273,7 +273,7 @@ policies:
         }
     )
 
-    def process(self, resource):
+    def process(self, resources):
         params = self.data.get('parameters', {})
         action_type = params.get('action_type', 'notification')
         # 告警更新切换到V1接口
