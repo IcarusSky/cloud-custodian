@@ -565,7 +565,7 @@ policies:
         **{
             "parameters": {
                 "type": "object",
-                "required": ["notification_list", "action_type"],
+                "required": ["notification_list", "subject", "message"],
                 "properties": {
                     "notification_list": {
                         "type": "array",
