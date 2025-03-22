@@ -557,6 +557,171 @@ policies:
         except exceptions.ClientRequestException as e:
             log.error(f"Create alarm failed: {e.error_msg}")
 
+@Alarm.action_registry.register("create-obs-event-alarm-rule")
+class CreateObsEventAlarmRule(BaseAction):
+    """Check CES isn't configured OBS change alarm rule.
+
+    :Example:
+
+    .. code-block:: yaml
+
+policies:
+  - name: alarm-obs-check
+    resource: huaweicloud.alarm
+    filters:
+        - type: missing
+          policy:
+            resource: huaweicloud.alarm
+            filters:
+              - type: value
+                key: enabled
+                value: true
+                op: eq
+              - type: value
+                key: type
+                value: "EVENT.SYS"
+                op: eq
+              - type: value
+                key: namespace
+                value: "SYS.OBS"
+                op: eq
+              - type: list-item
+                key: resources
+                attrs:
+                  - type: value
+                    key: "dimensions"
+                    value: []
+                    op: eq
+              - type: value
+                key: "contains(policies[].metric_name, 'setBucketPolicy')"
+                value: true
+                op: eq
+              - type: value
+                key: "contains(policies[].metric_name, 'setBucketAcl')"
+                value: true
+                op: eq
+              - type: value
+                key: "contains(policies[].metric_name, 'deleteBucketPolicy')"
+                value: true
+                op: eq
+              - type: value
+                key: "contains(policies[].metric_name, 'deleteBucket')"
+                value: true
+                op: eq
+    actions:
+      - type: create-obs-event-alarm-rule
+        parameters:
+          action_type: "notification"
+          notification_list:
+            - "urn:smn:cn-north-4:e196f2790965422f80502748f4d58649:CES_notification_group_kNrnzmm0J"
+
+    """
+
+    schema = type_schema(
+        "create-obs-event-alarm-rule",
+        required=["parameters"],
+        **{
+            "parameters": {
+                "type": "object",
+                "required": ["notification_list", "action_type"],
+                "properties": {
+                    "notification_list": {
+                        "type": "array",
+                        "items": {"type": "string"}
+                    },
+                    "action_type": {
+                        "type": "string",
+                        "enum": ["notification"]
+                    }
+                }
+            }
+        }
+    )
+
+    def process(self, resources):
+        params = self.data.get('parameters', {})
+        action_type = params.get('action_type', 'notification')
+        client = self.manager.get_client()
+        request = CreateAlarmRulesRequest()
+
+        list_ok_notifications_body = [
+            Notification(
+                type=action_type,
+                notification_list=params['notification_list']
+            )
+        ]
+        list_alarm_notifications_body = [
+            Notification(
+                type=action_type,
+                notification_list=params['notification_list']
+            )
+        ]
+        list_policies_body = [
+            Policy(
+                metric_name="setBucketPolicy",
+                period=0,
+                filter="average",
+                comparison_operator=">=",
+                value=1,
+                unit="count",
+                count=1,
+                suppress_duration=0,
+                level=2
+            ),
+            Policy(
+                metric_name="setBucketAcl",
+                period=0,
+                filter="average",
+                comparison_operator=">=",
+                value=1,
+                unit="count",
+                count=1,
+                suppress_duration=0,
+                level=2
+            ),
+            Policy(
+                metric_name="deleteBucketPolicy",
+                period=0,
+                filter="average",
+                comparison_operator=">=",
+                value=1,
+                unit="count",
+                count=1,
+                suppress_duration=0,
+                level=2
+            ),
+            Policy(
+                metric_name="deleteBucket",
+                period=0,
+                filter="average",
+                comparison_operator=">=",
+                value=1,
+                unit="count",
+                count=1,
+                suppress_duration=0,
+                level=2
+            )
+        ]
+        request.body = PostAlarmsReqV2(
+            notification_enabled=True,
+            enabled=True,
+            enterprise_project_id="0",
+            notification_end_time="23:59",
+            notification_begin_time="00:00",
+            ok_notifications=list_ok_notifications_body,
+            alarm_notifications=list_alarm_notifications_body,
+            type=AlarmType.EVENT_SYS,
+            policies=list_policies_body,
+            namespace="SYS.OBS",
+            description="alarm-obs-change",
+            name="alarm-obs-change",
+            resources=[]
+        )
+        try:
+            response = client.create_alarm_rules(request)
+            log.info(f"Create alarm {response}")
+        except exceptions.ClientRequestException as e:
+            log.error(f"Create alarm failed: {e.error_msg}")
 
 # @Alarm.action_registry.register('notify')
 # class AlarmNotify(Notify):
