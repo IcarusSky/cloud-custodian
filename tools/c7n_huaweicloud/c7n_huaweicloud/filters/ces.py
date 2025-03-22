@@ -4,6 +4,8 @@
 from c7n.filters import Filter
 from c7n.utils import type_schema
 
+def register_tms_filters(filters):
+    filters.register('alarm-namespace-metric', AlarmNameSpaceAndMetricFilter)
 
 class AlarmNameSpaceAndMetricFilter(Filter):
     schema = type_schema(
