@@ -529,7 +529,7 @@ policies:
         except exceptions.ClientRequestException as e:
             log.error(f"Create alarm failed: {e.error_msg}")
 
-@Alarm.action_registry.register("notify")
+@Alarm.action_registry.register("notify-by-smn")
 class NotifyBySMN(BaseAction):
     """Notify user by huawei cloud SMN.
 
@@ -550,7 +550,7 @@ policies:
                 namespaces: ["SYS.KMS"]
                 metric_names: ["retireGrant", "disableKey"]
     actions:
-      - type: notify
+      - type: notify-by-smn
         parameters:
           subject: "CES alarm not configured specified resource"
           message: "Currently, the Huawei Cloud CES system has not configured execution resource alarms. Please log in to the system to view the configuration."
@@ -560,7 +560,7 @@ policies:
     """
 
     schema = type_schema(
-        "create-vpc-event-alarm-rule",
+        "notify-by-smn",
         required=["parameters"],
         **{
             "parameters": {
