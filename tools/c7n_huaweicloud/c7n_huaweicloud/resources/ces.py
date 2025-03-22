@@ -177,7 +177,7 @@ policies:
             message=message
         )
         try:
-            self.manager.resource_type.service = 'ces'
+            self.manager.resource_type.service = 'cesv2'
             client = self.manager.get_client()
             response = client.batch_enable_alarm_rules(batch_enable_alarm_rule_request)
             log.info(f"Batch start alarm, response: {response}")
