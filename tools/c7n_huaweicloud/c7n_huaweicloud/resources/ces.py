@@ -139,7 +139,22 @@ policies:
     """
 
     schema = type_schema(
-        "batch-start-stopped-alarm-rules"
+        "batch-start-stopped-alarm-rules",
+        required=["parameters"],
+        **{
+            "parameters": {
+                "type": "object",
+                "required": ["notification_list", "subject", "message"],
+                "properties": {
+                    "notification_list": {
+                        "type": "array",
+                        "items": {"type": "string"}
+                    },
+                    "subject": {"type": "string"},
+                    "message": {"type": "string"}
+                }
+            }
+        }
     )
 
     def perform_action(self, resource):
@@ -723,65 +738,3 @@ policies:
             log.info(f"Create alarm {response}")
         except exceptions.ClientRequestException as e:
             log.error(f"Create alarm failed: {e.error_msg}")
-
-
-@Alarm.action_registry.register("alarm-action-enabled-check")
-class AlarmActionEnabledCheck(HuaweiCloudBaseAction):
-    """alarm-action-enabled-check.
-
-    :Example:
-
-    .. code-block:: yaml
-
-        policies:
-          - name: alarm-action-enabled-check
-            resource: huaweicloud.alarm
-            flters:
-              - type: value
-                key: alarm_enabled
-                value: false
-            actions:
-              - type: notify
-                to:
-                  - 1974365584@qq.com
-                subject: "Unverified CES Alarm"
-                message: "CES alarm {resource.alarm_id} is not started. Please verify th configuration."
-                template: default.html
-                transport:
-                  type: smtp
-                  host: smtp.qq.com    # SMTP 服务器地址
-                  port: 587            # TLS 加密端口qthjekzidosugdja
-                  username: "1974365584@qq.com"
-                  password: "qthjekzidosugdja"
-                  from: "cloud-alerts@huawei.com"
-                  starttls: true
-        code-block:: html
-        <html>
-            <body>
-                <h2>CES告警规则状态异常通知</h2>
-                    <p>发现以下告警规则状态未开启：</p>
-                        <ul>
-                            <li>告警规则ID: {{ resource.alarm_id }}</li>
-                        </ul>
-                    <p>请及时处理！</p>
-            </body>
-        </html>
-    """
-
-    schema = type_schema(
-        "alarm-action-enabled-check",
-        required=['transport', 'to', 'subject'],
-        **Notify.schema
-    )
-
-    def perform_action(self, resource):
-        notifier = AlarmNotify(
-            data=self.data,
-            manager=self.manager,
-            log=log
-        )
-        notification_data = {
-            'resources': [notifier.format_resource(r) for r in resources],
-            'account': self.manager.config.account_id
-        }
-        notifier.send_notification(notification_data)
