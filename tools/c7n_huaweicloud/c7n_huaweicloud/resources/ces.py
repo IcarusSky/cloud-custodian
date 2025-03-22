@@ -142,6 +142,7 @@ policies:
         "batch-start-stopped-alarm-rules",
         required=["parameters"],
         **{
+            "type": {"enum": ["batch-start-stopped-alarm-rules"]},
             "parameters": {
                 "type": "object",
                 "required": ["notification_list", "subject", "message"],
