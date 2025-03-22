@@ -150,12 +150,8 @@ policies:
                         "type": "array",
                         "items": {"type": "string"}
                     },
-                    "subject": {
-                        "type": "string"
-                    },
-                    "message": {
-                        "type": "string"
-                    }
+                    "subject": {"type": "string"},
+                    "message": {"type": "string"}
                 }
             }
         }
