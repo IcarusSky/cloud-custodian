@@ -19,23 +19,24 @@ class AlarmNameSpaceAndMetricFilter(Filter):
         period={'type': 'array', 'items':
             {
                 'type': 'number',
-                'enum': ['>', '>=', '=', '!=', '<', '<=', 'cycle_decrease', 'cycle_increase', 'cycle_wave']
+                'enum': [0, 1, 300, 1200, 3600, 14400, 86400]
             }},  # 目标period列表
         comparison_operator={'type': 'array', 'items':
             {
-                'type': 'string'
+                'type': 'string',
+                'enum': ['>', '>=', '=', '!=', '<', '<=', 'cycle_decrease', 'cycle_increase', 'cycle_wave']
             }},  # 目标comparison_operator列表
     )
 
     def process(self, resources, event=None):
         matched = []
         for alarm in resources:
-            # Namespace匹配
+            # Namespace匹配（参考网页3的命名空间规范）
             namespace_match = alarm.get('namespace') in self.data['namespaces']
             if not namespace_match:
                 continue
 
-            # 策略匹配检查
+            # 策略匹配检查（参考网页5的告警策略结构）
             policies = alarm.get('policies', [])
             policy_match = any(
                 self._check_policy(policy)
@@ -52,7 +53,7 @@ class AlarmNameSpaceAndMetricFilter(Filter):
         if not metric_match:
             return False
 
-        # 条件参数检查
+        # 条件参数检查（网页4的阈值条件逻辑）
         conditions = [
             ('count', self.data.get('count')),
             ('period', self.data.get('period')),
