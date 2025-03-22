@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import logging
-import smtplib
+import os
 
 from huaweicloudsdkces.v1 import *
 from huaweicloudsdkcore.exceptions import exceptions
@@ -171,7 +171,7 @@ policies:
         message = params.get('message', 'message')
         id_list = '\n'.join([f"- {id}" for id in list_alarm_ids])
         message += f"\nalarm list:\n{id_list}"
-        message += f"\nregion: {self.manager.region}"
+        message += f"\nregion: {os.getenv('HUAWEI_DEFAULT_REGION')}"
         publish_message_request = PublishMessageRequest()
         publish_message_request.body = PublishMessageRequestBody(
             subject=subject,
