@@ -135,6 +135,7 @@ policies:
           message: "You have the following alarms that have not been started, please check the system. The tasks have been started, please log in to the system and check again."
           notification_list:
             - "urn:smn:cn-north-4:xxxxx:CES_notification_xxxxxxx"
+
     """
 
     schema = type_schema(
@@ -150,10 +151,10 @@ policies:
                         "items": {"type": "string"}
                     },
                     "subject": {
-                        "type": "string",
+                        "type": "string"
                     },
                     "message": {
-                        "type": "string",
+                        "type": "string"
                     }
                 }
             }
@@ -172,9 +173,9 @@ policies:
         params = self.data.get('parameters', {})
         subject = params.get('subject', 'subject')
         message = params.get('message', 'message')
-        # id_list = '\n'.join([f"- {id}" for id in list_alarm_ids])
-        # message += f"\nalarm list:\n{id_list}"
-        # message += f"\nregion: {self.region}"
+        id_list = '\n'.join([f"- {id}" for id in list_alarm_ids])
+        message += f"\nalarm list:\n{id_list}"
+        message += f"\nregion: {self.region}"
         publish_message_request = PublishMessageRequest()
         publish_message_request.body = PublishMessageRequestBody(
             subject=subject,
