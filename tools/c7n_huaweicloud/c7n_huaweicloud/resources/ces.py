@@ -27,41 +27,6 @@ class Alarm(QueryResourceManager):
         tag = True
 Alarm.filter_registry.register('missing', Missing)
 
-@Alarm.action_registry.register("delete-alarm-by-id")
-class AlarmDelete(HuaweiCloudBaseAction):
-    """Deletes CES Alarm.
-
-    :Example:
-
-    .. code-block:: yaml
-
-        policies:
-          - name: delete-stopped-alarm
-            resource: huaweicloud.alarm
-            flters:
-              - type: value
-                key: alarm_action_enabled
-                value: true
-            actions:
-              - delete-alarm-by-id
-    """
-
-    schema = type_schema("delete-alarm-by-id")
-
-    def perform_action(self, resource):
-        response = None
-        client = self.manager.get_client()
-        request = BatchDeleteAlarmRulesRequest()
-        request.body = BatchDeleteAlarmsRequestBody(alarm_ids=[resource["id"]])
-        try:
-            response = client.batch_delete_alarm_rules(request)
-            log.info(f"Deleted alarm {response}")
-
-        except exceptions.ClientRequestException as e:
-            log.error(f"Delete failed: {e.error_msg}")
-        return response
-
-
 @Alarm.action_registry.register("alarm-update-notification")
 class AlarmUpdateNotification(HuaweiCloudBaseAction):
     """Update CES Alarm notification settings.
@@ -70,19 +35,20 @@ class AlarmUpdateNotification(HuaweiCloudBaseAction):
 
     .. code-block:: yaml
 
-        policies:
-          - name: ces-alarm-have-smn-check
-            resource: huaweicloud.alarm
-            filters:
-              - type: value
-                key: alarm_action_enabled
-                value: false
-            actions:
-              - type: alarm-update-notification
-                parameters:
-                  action_type: "notification"
-                  notification_list:
-                    - "urn:smn:cn-north-4:xxxxxxxxxxx:ces_notification_group_xxxxx"
+policies:
+  - name: ces-alarm-have-smn-check
+    description: "Filter all alarm rules that do not have notifications enabled. Update the SMN notifications corresponding to these alarm settings"
+    resource: huaweicloud.ces.alarm
+    filters:
+      - type: value
+        key: notification_enabled
+        value: false
+    actions:
+      - type: alarm-update-notification
+        parameters:
+          action_type: "notification"
+          notification_list:
+            - "urn:smn:cn-north-4:xxxxxxxxxxx:ces_notification_group_xxxxx"
 
     """
 
@@ -141,7 +107,7 @@ class AlarmUpdateNotification(HuaweiCloudBaseAction):
         return response
 
 
-@Alarm.action_registry.register("alarm-enabled-check-and-start")
+@Alarm.action_registry.register("batch-start-stopped-alarm-rules")
 class BatchStartStoppedAlarmRules(HuaweiCloudBaseAction):
     """Update CES Alarm all start.
 
@@ -149,19 +115,20 @@ class BatchStartStoppedAlarmRules(HuaweiCloudBaseAction):
 
     .. code-block:: yaml
 
-        policies:
-          - name: enable-all-alarm-rule-started
-            resource: huaweicloud.alarm
-            filters:
-              - type: value
-                key: enabled
-                value: false
-            actions:
-              - type: alarm-enabled-check-and-start
+policies:
+  - name: alarm-action-enabled-check
+    description: "Verify that all alarm rules must be enabled and enable the disabled alarms."
+    resource: huaweicloud.alarm
+    filters:
+      - type: value
+        key: enabled
+        value: false
+    actions:
+      - type: batch-start-stopped-alarm-rules
 
     """
 
-    schema = type_schema("alarm-enabled-check-and-start")
+    schema = type_schema("batch-start-stopped-alarm-rules")
 
     def perform_action(self, resource):
         response = None
@@ -179,6 +146,339 @@ class BatchStartStoppedAlarmRules(HuaweiCloudBaseAction):
             log.error(f"Batch start alarm failed: {e.error_msg}")
         return response
 
+@Alarm.action_registry.register("create-kms-event-alarm-rule")
+class CreateKmsEventAlarmRule(BaseAction):
+    """Check CES isn't configured KMS change alarm rule.
+
+    :Example:
+
+    .. code-block:: yaml
+
+policies:
+  - name: alarm-kms-disable-or-delete-key
+    description: "Check whether the monitoring alarm for events that monitor KMS disabling or scheduled key deletion is configured. If not, create the corresponding alarm."
+    resource: huaweicloud.alarm
+    filters:
+        - type: missing
+          policy:
+            resource: huaweicloud.alarm
+            filters:
+              - type: value
+                key: enabled
+                value: true
+                op: eq
+              - type: value
+                key: type
+                value: "EVENT.SYS"
+                op: eq
+              - type: value
+                key: namespace
+                value: "SYS.KMS"
+                op: eq
+              - type: list-item
+                key: resources
+                attrs:
+                  - type: value
+                    key: "dimensions"
+                    value: []
+                    op: eq
+              - type: value
+                key: "contains(policies[].metric_name, 'retireGrant')"
+                value: true
+                op: eq
+              - type: value
+                key: "contains(policies[].metric_name, 'revokeGrant')"
+                value: true
+                op: eq
+              - type: value
+                key: "contains(policies[].metric_name, 'disableKey')"
+                value: true
+                op: eq
+              - type: value
+                key: "contains(policies[].metric_name, 'scheduleKeyDeletion')"
+                value: true
+                op: eq
+    actions:
+      - type: create-kms-event-alarm-rule
+        parameters:
+          action_type: "notification"
+          notification_list:
+            - "urn:smn:cn-north-4:e196f2790965422f80502748f4d58649:CES_notification_group_kNrnzmm0J"
+
+    """
+
+    schema = type_schema(
+        "create-kms-event-alarm-rule",
+        required=["parameters"],
+        **{
+            "parameters": {
+                "type": "object",
+                "required": ["notification_list", "action_type"],
+                "properties": {
+                    "notification_list": {
+                        "type": "array",
+                        "items": {"type": "string"}
+                    },
+                    "action_type": {
+                        "type": "string",
+                        "enum": ["notification"]
+                    }
+                }
+            }
+        }
+    )
+
+    def process(self, resources):
+        params = self.data.get('parameters', {})
+        action_type = params.get('action_type', 'notification')
+        client = self.manager.get_client()
+        request = CreateAlarmRulesRequest()
+
+        list_ok_notifications_body = [
+            Notification(
+                type=action_type,
+                notification_list=params['notification_list']
+            )
+        ]
+        list_alarm_notifications_body = [
+            Notification(
+                type=action_type,
+                notification_list=params['notification_list']
+            )
+        ]
+        list_policies_body = [
+            Policy(
+                metric_name="retireGrant",
+                period=0,
+                filter="average",
+                comparison_operator=">=",
+                value=1,
+                unit="count",
+                count=1,
+                suppress_duration=0,
+                level=2
+            ),
+            Policy(
+                metric_name="revokeGrant",
+                period=0,
+                filter="average",
+                comparison_operator=">=",
+                value=1,
+                unit="count",
+                count=1,
+                suppress_duration=0,
+                level=2
+            ),
+            Policy(
+                metric_name="disableKey",
+                period=0,
+                filter="average",
+                comparison_operator=">=",
+                value=1,
+                unit="count",
+                count=1,
+                suppress_duration=0,
+                level=2
+            ),
+            Policy(
+                metric_name="scheduleKeyDeletion",
+                period=0,
+                filter="average",
+                comparison_operator=">=",
+                value=1,
+                unit="count",
+                count=1,
+                suppress_duration=0,
+                level=2
+            )
+        ]
+        request.body = PostAlarmsReqV2(
+            notification_enabled=True,
+            enabled=True,
+            enterprise_project_id="0",
+            notification_end_time="23:59",
+            notification_begin_time="00:00",
+            ok_notifications=list_ok_notifications_body,
+            alarm_notifications=list_alarm_notifications_body,
+            type=AlarmType.EVENT_SYS,
+            policies=list_policies_body,
+            namespace="SYS.KMS",
+            description="alarm-kms-change",
+            name="alarm-kms-change",
+            resources=[]
+        )
+        try:
+            response = client.create_alarm_rules(request)
+            log.info(f"Create alarm {response}")
+        except exceptions.ClientRequestException as e:
+            log.error(f"Create alarm failed: {e.error_msg}")
+
+@Alarm.action_registry.register("create-obs-event-alarm-rule")
+class CreateObsEventAlarmRule(BaseAction):
+    """Check CES isn't configured OBS change alarm rule.
+
+    :Example:
+
+    .. code-block:: yaml
+
+policies:
+  - name: alarm-obs-bucket-policy-change
+    description: "Check whether the alarm for the OBS bucket policy change event is configured. If not, create a corresponding alarm."
+    resource: huaweicloud.alarm
+    filters:
+        - type: missing
+          policy:
+            resource: huaweicloud.alarm
+            filters:
+              - type: value
+                key: enabled
+                value: true
+                op: eq
+              - type: value
+                key: type
+                value: "EVENT.SYS"
+                op: eq
+              - type: value
+                key: namespace
+                value: "SYS.OBS"
+                op: eq
+              - type: list-item
+                key: resources
+                attrs:
+                  - type: value
+                    key: "dimensions"
+                    value: []
+                    op: eq
+              - type: value
+                key: "contains(policies[].metric_name, 'setBucketPolicy')"
+                value: true
+                op: eq
+              - type: value
+                key: "contains(policies[].metric_name, 'setBucketAcl')"
+                value: true
+                op: eq
+              - type: value
+                key: "contains(policies[].metric_name, 'deleteBucketPolicy')"
+                value: true
+                op: eq
+              - type: value
+                key: "contains(policies[].metric_name, 'deleteBucket')"
+                value: true
+                op: eq
+    actions:
+      - type: create-obs-event-alarm-rule
+        parameters:
+          action_type: "notification"
+          notification_list:
+            - "urn:smn:cn-north-4:e196f2790965422f80502748f4d58649:CES_notification_group_kNrnzmm0J"
+
+    """
+
+    schema = type_schema(
+        "create-obs-event-alarm-rule",
+        required=["parameters"],
+        **{
+            "parameters": {
+                "type": "object",
+                "required": ["notification_list", "action_type"],
+                "properties": {
+                    "notification_list": {
+                        "type": "array",
+                        "items": {"type": "string"}
+                    },
+                    "action_type": {
+                        "type": "string",
+                        "enum": ["notification"]
+                    }
+                }
+            }
+        }
+    )
+
+    def process(self, resources):
+        params = self.data.get('parameters', {})
+        action_type = params.get('action_type', 'notification')
+        client = self.manager.get_client()
+        request = CreateAlarmRulesRequest()
+
+        list_ok_notifications_body = [
+            Notification(
+                type=action_type,
+                notification_list=params['notification_list']
+            )
+        ]
+        list_alarm_notifications_body = [
+            Notification(
+                type=action_type,
+                notification_list=params['notification_list']
+            )
+        ]
+        list_policies_body = [
+            Policy(
+                metric_name="setBucketPolicy",
+                period=0,
+                filter="average",
+                comparison_operator=">=",
+                value=1,
+                unit="count",
+                count=1,
+                suppress_duration=0,
+                level=2
+            ),
+            Policy(
+                metric_name="setBucketAcl",
+                period=0,
+                filter="average",
+                comparison_operator=">=",
+                value=1,
+                unit="count",
+                count=1,
+                suppress_duration=0,
+                level=2
+            ),
+            Policy(
+                metric_name="deleteBucketPolicy",
+                period=0,
+                filter="average",
+                comparison_operator=">=",
+                value=1,
+                unit="count",
+                count=1,
+                suppress_duration=0,
+                level=2
+            ),
+            Policy(
+                metric_name="deleteBucket",
+                period=0,
+                filter="average",
+                comparison_operator=">=",
+                value=1,
+                unit="count",
+                count=1,
+                suppress_duration=0,
+                level=2
+            )
+        ]
+        request.body = PostAlarmsReqV2(
+            notification_enabled=True,
+            enabled=True,
+            enterprise_project_id="0",
+            notification_end_time="23:59",
+            notification_begin_time="00:00",
+            ok_notifications=list_ok_notifications_body,
+            alarm_notifications=list_alarm_notifications_body,
+            type=AlarmType.EVENT_SYS,
+            policies=list_policies_body,
+            namespace="SYS.OBS",
+            description="alarm-obs-change",
+            name="alarm-obs-change",
+            resources=[]
+        )
+        try:
+            response = client.create_alarm_rules(request)
+            log.info(f"Create alarm {response}")
+        except exceptions.ClientRequestException as e:
+            log.error(f"Create alarm failed: {e.error_msg}")
 
 @Alarm.action_registry.register("create-vpc-event-alarm-rule")
 class CreateVpcEventAlarmRule(BaseAction):
@@ -189,7 +489,8 @@ class CreateVpcEventAlarmRule(BaseAction):
     .. code-block:: yaml
 
 policies:
-  - name: alarm-vpc-check
+  - name: alarm-vpc-change
+    description: "Check whether the event monitoring alarm for monitoring VPC changes is configured. If not, create the corresponding alarm."
     resource: huaweicloud.alarm
     filters:
         - type: missing
@@ -216,7 +517,7 @@ policies:
                     value: []
                     op: eq
               - type: value
-                key: "contains(policies[].metric_name, 'deleteVpc')"
+                key: "contains(policies[].metric_name, 'modifyVpc')"
                 value: true
                 op: eq
               - type: value
@@ -391,337 +692,7 @@ policies:
         except exceptions.ClientRequestException as e:
             log.error(f"Create alarm failed: {e.error_msg}")
 
-@Alarm.action_registry.register("create-kms-event-alarm-rule")
-class CreateKmsEventAlarmRule(BaseAction):
-    """Check CES isn't configured KMS change alarm rule.
 
-    :Example:
-
-    .. code-block:: yaml
-
-policies:
-  - name: alarm-kms-check
-    resource: huaweicloud.alarm
-    filters:
-        - type: missing
-          policy:
-            resource: huaweicloud.alarm
-            filters:
-              - type: value
-                key: enabled
-                value: true
-                op: eq
-              - type: value
-                key: type
-                value: "EVENT.SYS"
-                op: eq
-              - type: value
-                key: namespace
-                value: "SYS.KMS"
-                op: eq
-              - type: list-item
-                key: resources
-                attrs:
-                  - type: value
-                    key: "dimensions"
-                    value: []
-                    op: eq
-              - type: value
-                key: "contains(policies[].metric_name, 'retireGrant')"
-                value: true
-                op: eq
-              - type: value
-                key: "contains(policies[].metric_name, 'revokeGrant')"
-                value: true
-                op: eq
-              - type: value
-                key: "contains(policies[].metric_name, 'disableKey')"
-                value: true
-                op: eq
-              - type: value
-                key: "contains(policies[].metric_name, 'scheduleKeyDeletion')"
-                value: true
-                op: eq
-    actions:
-      - type: create-kms-event-alarm-rule
-        parameters:
-          action_type: "notification"
-          notification_list:
-            - "urn:smn:cn-north-4:e196f2790965422f80502748f4d58649:CES_notification_group_kNrnzmm0J"
-
-    """
-
-    schema = type_schema(
-        "create-kms-event-alarm-rule",
-        required=["parameters"],
-        **{
-            "parameters": {
-                "type": "object",
-                "required": ["notification_list", "action_type"],
-                "properties": {
-                    "notification_list": {
-                        "type": "array",
-                        "items": {"type": "string"}
-                    },
-                    "action_type": {
-                        "type": "string",
-                        "enum": ["notification"]
-                    }
-                }
-            }
-        }
-    )
-
-    def process(self, resources):
-        params = self.data.get('parameters', {})
-        action_type = params.get('action_type', 'notification')
-        client = self.manager.get_client()
-        request = CreateAlarmRulesRequest()
-
-        list_ok_notifications_body = [
-            Notification(
-                type=action_type,
-                notification_list=params['notification_list']
-            )
-        ]
-        list_alarm_notifications_body = [
-            Notification(
-                type=action_type,
-                notification_list=params['notification_list']
-            )
-        ]
-        list_policies_body = [
-            Policy(
-                metric_name="retireGrant",
-                period=0,
-                filter="average",
-                comparison_operator=">=",
-                value=1,
-                unit="count",
-                count=1,
-                suppress_duration=0,
-                level=2
-            ),
-            Policy(
-                metric_name="revokeGrant",
-                period=0,
-                filter="average",
-                comparison_operator=">=",
-                value=1,
-                unit="count",
-                count=1,
-                suppress_duration=0,
-                level=2
-            ),
-            Policy(
-                metric_name="disableKey",
-                period=0,
-                filter="average",
-                comparison_operator=">=",
-                value=1,
-                unit="count",
-                count=1,
-                suppress_duration=0,
-                level=2
-            ),
-            Policy(
-                metric_name="scheduleKeyDeletion",
-                period=0,
-                filter="average",
-                comparison_operator=">=",
-                value=1,
-                unit="count",
-                count=1,
-                suppress_duration=0,
-                level=2
-            )
-        ]
-        request.body = PostAlarmsReqV2(
-            notification_enabled=True,
-            enabled=True,
-            enterprise_project_id="0",
-            notification_end_time="23:59",
-            notification_begin_time="00:00",
-            ok_notifications=list_ok_notifications_body,
-            alarm_notifications=list_alarm_notifications_body,
-            type=AlarmType.EVENT_SYS,
-            policies=list_policies_body,
-            namespace="SYS.KMS",
-            description="alarm-kms-change",
-            name="alarm-kms-change",
-            resources=[]
-        )
-        try:
-            response = client.create_alarm_rules(request)
-            log.info(f"Create alarm {response}")
-        except exceptions.ClientRequestException as e:
-            log.error(f"Create alarm failed: {e.error_msg}")
-
-@Alarm.action_registry.register("create-obs-event-alarm-rule")
-class CreateObsEventAlarmRule(BaseAction):
-    """Check CES isn't configured OBS change alarm rule.
-
-    :Example:
-
-    .. code-block:: yaml
-
-policies:
-  - name: alarm-obs-check
-    resource: huaweicloud.alarm
-    filters:
-        - type: missing
-          policy:
-            resource: huaweicloud.alarm
-            filters:
-              - type: value
-                key: enabled
-                value: true
-                op: eq
-              - type: value
-                key: type
-                value: "EVENT.SYS"
-                op: eq
-              - type: value
-                key: namespace
-                value: "SYS.OBS"
-                op: eq
-              - type: list-item
-                key: resources
-                attrs:
-                  - type: value
-                    key: "dimensions"
-                    value: []
-                    op: eq
-              - type: value
-                key: "contains(policies[].metric_name, 'setBucketPolicy')"
-                value: true
-                op: eq
-              - type: value
-                key: "contains(policies[].metric_name, 'setBucketAcl')"
-                value: true
-                op: eq
-              - type: value
-                key: "contains(policies[].metric_name, 'deleteBucketPolicy')"
-                value: true
-                op: eq
-              - type: value
-                key: "contains(policies[].metric_name, 'deleteBucket')"
-                value: true
-                op: eq
-    actions:
-      - type: create-obs-event-alarm-rule
-        parameters:
-          action_type: "notification"
-          notification_list:
-            - "urn:smn:cn-north-4:e196f2790965422f80502748f4d58649:CES_notification_group_kNrnzmm0J"
-
-    """
-
-    schema = type_schema(
-        "create-obs-event-alarm-rule",
-        required=["parameters"],
-        **{
-            "parameters": {
-                "type": "object",
-                "required": ["notification_list", "action_type"],
-                "properties": {
-                    "notification_list": {
-                        "type": "array",
-                        "items": {"type": "string"}
-                    },
-                    "action_type": {
-                        "type": "string",
-                        "enum": ["notification"]
-                    }
-                }
-            }
-        }
-    )
-
-    def process(self, resources):
-        params = self.data.get('parameters', {})
-        action_type = params.get('action_type', 'notification')
-        client = self.manager.get_client()
-        request = CreateAlarmRulesRequest()
-
-        list_ok_notifications_body = [
-            Notification(
-                type=action_type,
-                notification_list=params['notification_list']
-            )
-        ]
-        list_alarm_notifications_body = [
-            Notification(
-                type=action_type,
-                notification_list=params['notification_list']
-            )
-        ]
-        list_policies_body = [
-            Policy(
-                metric_name="setBucketPolicy",
-                period=0,
-                filter="average",
-                comparison_operator=">=",
-                value=1,
-                unit="count",
-                count=1,
-                suppress_duration=0,
-                level=2
-            ),
-            Policy(
-                metric_name="setBucketAcl",
-                period=0,
-                filter="average",
-                comparison_operator=">=",
-                value=1,
-                unit="count",
-                count=1,
-                suppress_duration=0,
-                level=2
-            ),
-            Policy(
-                metric_name="deleteBucketPolicy",
-                period=0,
-                filter="average",
-                comparison_operator=">=",
-                value=1,
-                unit="count",
-                count=1,
-                suppress_duration=0,
-                level=2
-            ),
-            Policy(
-                metric_name="deleteBucket",
-                period=0,
-                filter="average",
-                comparison_operator=">=",
-                value=1,
-                unit="count",
-                count=1,
-                suppress_duration=0,
-                level=2
-            )
-        ]
-        request.body = PostAlarmsReqV2(
-            notification_enabled=True,
-            enabled=True,
-            enterprise_project_id="0",
-            notification_end_time="23:59",
-            notification_begin_time="00:00",
-            ok_notifications=list_ok_notifications_body,
-            alarm_notifications=list_alarm_notifications_body,
-            type=AlarmType.EVENT_SYS,
-            policies=list_policies_body,
-            namespace="SYS.OBS",
-            description="alarm-obs-change",
-            name="alarm-obs-change",
-            resources=[]
-        )
-        try:
-            response = client.create_alarm_rules(request)
-            log.info(f"Create alarm {response}")
-        except exceptions.ClientRequestException as e:
-            log.error(f"Create alarm failed: {e.error_msg}")
 
 # @Alarm.action_registry.register('notify')
 # class AlarmNotify(Notify):
