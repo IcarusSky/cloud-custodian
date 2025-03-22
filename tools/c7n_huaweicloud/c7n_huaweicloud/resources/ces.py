@@ -8,14 +8,15 @@ from huaweicloudsdkces.v1 import *
 from huaweicloudsdkcore.exceptions import exceptions
 from huaweicloudsdkces.v2 import *
 
-from c7n.actions import Notify
+from c7n.actions import Notify, ActionRegistry
+from c7n.filters.missing import Missing
+from c7n.filters import Filter, FilterRegistry, ValueFilter
 from c7n.utils import type_schema
 from c7n_huaweicloud.actions.base import HuaweiCloudBaseAction
 from c7n_huaweicloud.provider import resources
 from c7n_huaweicloud.query import QueryResourceManager, TypeInfo
 
 log = logging.getLogger("custodian.huaweicloud.resources.alarm")
-
 
 @resources.register('alarm')
 class Alarm(QueryResourceManager):
@@ -24,7 +25,7 @@ class Alarm(QueryResourceManager):
         enum_spec = ("list_alarm_rules", 'alarms', 'offset')
         id = 'alarm_id'
         tag = True
-
+Alarm.filter_registry.register('missing', Missing)
 
 @Alarm.action_registry.register("delete_by_id")
 class AlarmDelete(HuaweiCloudBaseAction):
@@ -191,53 +192,57 @@ policies:
   - name: enable-all-alarm-rule-started
     resource: huaweicloud.alarm
     filters:
-        - type: value
-          key: enabled
-          value: true
-          op: eq
-        - type: value
-          key: type
-          value: "EVENT.SYS"
-          op: eq
-        - type: value
-          key: namespace
-          value: "SYS.VPC"
-          op: eq
-        - type: list-item
-          key: resources
-          attrs:
-            - type: value
-              key: "dimensions"
-              value: []
-              op: eq
-        - type: value
-          key: "contains(policies[].metric_name, 'modifyVpc')"
-          value: true
-          op: eq
-        - type: value
-          key: "contains(policies[].metric_name, 'modifySubnet')"
-          value: true
-          op: eq
-        - type: value
-          key: "contains(policies[].metric_name, 'deleteSubnet')"
-          value: true
-          op: eq
-        - type: value
-          key: "contains(policies[].metric_name, 'modifyBandwidth')"
-          value: true
-          op: eq
-        - type: value
-          key: "contains(policies[].metric_name, 'deleteVpn')"
-          value: true
-          op: eq
-        - type: value
-          key: "contains(policies[].metric_name, 'modifyVpc')"
-          value: true
-          op: eq
-        - type: value
-          key: "contains(policies[].metric_name, 'modifyVpn')"
-          value: true
-          op: eq
+        - type: missing
+          policy:
+            resource: huaweicloud.alarm
+            filters:
+              - type: value
+                key: enabled
+                value: true
+                op: eq
+              - type: value
+                key: type
+                value: "EVENT.SYS"
+                op: eq
+              - type: value
+                key: namespace
+                value: "SYS.VPC"
+                op: eq
+              - type: list-item
+                key: resources
+                attrs:
+                  - type: value
+                    key: "dimensions"
+                    value: []
+                    op: eq
+              - type: value
+                key: "contains(policies[].metric_name, 'modifyVpc')"
+                value: true
+                op: eq
+              - type: value
+                key: "contains(policies[].metric_name, 'modifySubnet')"
+                value: true
+                op: eq
+              - type: value
+                key: "contains(policies[].metric_name, 'deleteSubnet')"
+                value: true
+                op: eq
+              - type: value
+                key: "contains(policies[].metric_name, 'modifyBandwidth')"
+                value: true
+                op: eq
+              - type: value
+                key: "contains(policies[].metric_name, 'deleteVpn')"
+                value: true
+                op: eq
+              - type: value
+                key: "contains(policies[].metric_name, 'modifyVpc')"
+                value: true
+                op: eq
+              - type: value
+                key: "contains(policies[].metric_name, 'modifyVpn')"
+                value: true
+                op: eq
     actions:
       - type: alarm-vpc-check
         parameters:
@@ -268,130 +273,125 @@ policies:
         }
     )
 
-    def perform_action(self, resource):
-        response = None
-        log.info(f"resource: {resource}")
-        if resource["id"] == "":
-            params = self.data.get('parameters', {})
-            action_type = params.get('action_type', 'notification')
-            # 告警更新切换到V1接口
-            client = self.manager.get_client()
-            request = CreateAlarmRulesRequest()
+    def process(self, resource):
+        params = self.data.get('parameters', {})
+        action_type = params.get('action_type', 'notification')
+        # 告警更新切换到V1接口
+        client = self.manager.get_client()
+        request = CreateAlarmRulesRequest()
 
-            list_ok_notifications_body = [
-                Notification(
-                    type=action_type,
-                    notification_list=params['notification_list']
-                )
-            ]
-            list_alarm_notifications_body = [
-                Notification(
-                    type=action_type,
-                    notification_list=params['notification_list']
-                )
-            ]
-            list_policies_body = [
-                Policy(
-                    metric_name="deleteVpc",
-                    period=0,
-                    filter="average",
-                    comparison_operator=">=",
-                    value=1,
-                    unit="count",
-                    count=1,
-                    suppress_duration=0,
-                    level=2
-                ),
-                Policy(
-                    metric_name="modifyVpn",
-                    period=0,
-                    filter="average",
-                    comparison_operator=">=",
-                    value=1,
-                    unit="count",
-                    count=1,
-                    suppress_duration=0,
-                    level=2
-                ),
-                Policy(
-                    metric_name="deleteVpn",
-                    period=0,
-                    filter="average",
-                    comparison_operator=">=",
-                    value=1,
-                    unit="count",
-                    count=1,
-                    suppress_duration=0,
-                    level=2
-                ),
-                Policy(
-                    metric_name="modifyVpc",
-                    period=0,
-                    filter="average",
-                    comparison_operator=">=",
-                    value=1,
-                    unit="count",
-                    count=1,
-                    suppress_duration=0,
-                    level=2
-                ),
-                Policy(
-                    metric_name="deleteSubnet",
-                    period=0,
-                    filter="average",
-                    comparison_operator=">=",
-                    value=1,
-                    unit="count",
-                    count=1,
-                    suppress_duration=0,
-                    level=2
-                ),
-                Policy(
-                    metric_name="modifySubnet",
-                    period=0,
-                    filter="average",
-                    comparison_operator=">=",
-                    value=1,
-                    unit="count",
-                    count=1,
-                    suppress_duration=0,
-                    level=2
-                ),
-                Policy(
-                    metric_name="modifyBandwidth",
-                    period=0,
-                    filter="average",
-                    comparison_operator=">=",
-                    value=1,
-                    unit="count",
-                    count=1,
-                    suppress_duration=0,
-                    level=2
-                )
-            ]
-            request.body = PostAlarmsReqV2(
-                notification_enabled=True,
-                enabled=True,
-                enterprise_project_id="0",
-                notification_end_time="23:59",
-                notification_begin_time="00:00",
-                ok_notifications=list_ok_notifications_body,
-                alarm_notifications=list_alarm_notifications_body,
-                type=AlarmType.EVENT_SYS,
-                policies=list_policies_body,
-                namespace="SYS.VPC",
-                description="alarm-vpc-change",
-                name="alarm-vpc-change",
-                resources=[]
+        list_ok_notifications_body = [
+            Notification(
+                type=action_type,
+                notification_list=params['notification_list']
             )
-            try:
-                response = client.create_alarm_rules(request)
-                log.info(f"Create alarm {response}")
-            except exceptions.ClientRequestException as e:
-                log.error(f"Create alarm failed: {e.error_msg}")
-        else:
-            log.info(f"Has already config vpc event alarm")
-        return response
+        ]
+        list_alarm_notifications_body = [
+            Notification(
+                type=action_type,
+                notification_list=params['notification_list']
+            )
+        ]
+        list_policies_body = [
+            Policy(
+                metric_name="deleteVpc",
+                period=0,
+                filter="average",
+                comparison_operator=">=",
+                value=1,
+                unit="count",
+                count=1,
+                suppress_duration=0,
+                level=2
+            ),
+            Policy(
+                metric_name="modifyVpn",
+                period=0,
+                filter="average",
+                comparison_operator=">=",
+                value=1,
+                unit="count",
+                count=1,
+                suppress_duration=0,
+                level=2
+            ),
+            Policy(
+                metric_name="deleteVpn",
+                period=0,
+                filter="average",
+                comparison_operator=">=",
+                value=1,
+                unit="count",
+                count=1,
+                suppress_duration=0,
+                level=2
+            ),
+            Policy(
+                metric_name="modifyVpc",
+                period=0,
+                filter="average",
+                comparison_operator=">=",
+                value=1,
+                unit="count",
+                count=1,
+                suppress_duration=0,
+                level=2
+            ),
+            Policy(
+                metric_name="deleteSubnet",
+                period=0,
+                filter="average",
+                comparison_operator=">=",
+                value=1,
+                unit="count",
+                count=1,
+                suppress_duration=0,
+                level=2
+            ),
+            Policy(
+                metric_name="modifySubnet",
+                period=0,
+                filter="average",
+                comparison_operator=">=",
+                value=1,
+                unit="count",
+                count=1,
+                suppress_duration=0,
+                level=2
+            ),
+            Policy(
+                metric_name="modifyBandwidth",
+                period=0,
+                filter="average",
+                comparison_operator=">=",
+                value=1,
+                unit="count",
+                count=1,
+                suppress_duration=0,
+                level=2
+            )
+        ]
+        request.body = PostAlarmsReqV2(
+            notification_enabled=True,
+            enabled=True,
+            enterprise_project_id="0",
+            notification_end_time="23:59",
+            notification_begin_time="00:00",
+            ok_notifications=list_ok_notifications_body,
+            alarm_notifications=list_alarm_notifications_body,
+            type=AlarmType.EVENT_SYS,
+            policies=list_policies_body,
+            namespace="SYS.VPC",
+            description="alarm-vpc-change",
+            name="alarm-vpc-change",
+            resources=[]
+        )
+        try:
+            response = client.create_alarm_rules(request)
+            log.info(f"Create alarm {response}")
+        except exceptions.ClientRequestException as e:
+            log.error(f"Create alarm failed: {e.error_msg}")
+
 
 # @Alarm.action_registry.register('notify')
 # class AlarmNotify(Notify):
