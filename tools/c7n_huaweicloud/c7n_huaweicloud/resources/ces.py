@@ -9,8 +9,10 @@ from c7n_huaweicloud.provider import resources
 from c7n_huaweicloud.query import QueryResourceManager, TypeInfo
 from huaweicloudsdkces.v1 import *
 from huaweicloudsdkces.v2 import *
+from huaweicloudsdkcore.auth.credentials import BasicCredentials
 from huaweicloudsdkcore.exceptions import exceptions
-from huaweicloudsdksmn.v2 import PublishMessageRequest, PublishMessageRequestBody
+from huaweicloudsdksmn.v2 import PublishMessageRequest, PublishMessageRequestBody, SmnClient
+from huaweicloudsdksmn.v2.region.smn_region import SmnRegion
 
 from c7n.actions import BaseAction
 from c7n.filters.missing import Missing
@@ -584,13 +586,21 @@ policies:
         params = self.data.get('parameters', {})
         subject = params.get('subject', 'subject')
         message = params.get('message', 'message')
+        message += f"\nregion: {os.getenv('HUAWEI_DEFAULT_REGION')}"
         publish_message_request = PublishMessageRequest()
         publish_message_request.body = PublishMessageRequestBody(
             subject=subject,
             message=message
         )
-        self.manager.resource_type.service = 'smn'
-        client = self.manager.get_client()
+        ak = os.getenv("HUAWEI_ACCESS_KEY_ID")
+        sk = os.getenv('HUAWEI_SECRET_ACCESS_KEY')
+        credentials = BasicCredentials(ak, sk)
+        client = SmnClient.new_builder() \
+                .with_credentials(credentials) \
+                .with_region(SmnRegion.value_of(os.getenv('HUAWEI_DEFAULT_REGION'))) \
+                .build()
+        # self.manager.resource_type.service = 'smn'
+        # client = self.manager.get_client()
         for topic_urn in params['notification_list']:
             publish_message_request.topic_urn = topic_urn,
             log.info(f"Message send, request: {publish_message_request}")
