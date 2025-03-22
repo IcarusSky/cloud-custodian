@@ -4,18 +4,17 @@
 import logging
 import os
 
-from huaweicloudsdkces.v1 import *
-from huaweicloudsdkcore.exceptions import exceptions
-from huaweicloudsdkces.v2 import *
-from huaweicloudsdksmn.v2 import PublishMessageRequest, PublishMessageRequestBody
-
-from c7n.actions import Notify, ActionRegistry, BaseAction
-from c7n.filters.missing import Missing
-from c7n.filters import Filter, FilterRegistry, ValueFilter
-from c7n.utils import type_schema
 from c7n_huaweicloud.actions.base import HuaweiCloudBaseAction
 from c7n_huaweicloud.provider import resources
 from c7n_huaweicloud.query import QueryResourceManager, TypeInfo
+from huaweicloudsdkces.v1 import *
+from huaweicloudsdkces.v2 import *
+from huaweicloudsdkcore.exceptions import exceptions
+from huaweicloudsdksmn.v2 import PublishMessageRequest, PublishMessageRequestBody
+
+from c7n.actions import BaseAction
+from c7n.filters.missing import Missing
+from c7n.utils import type_schema
 
 log = logging.getLogger("custodian.huaweicloud.resources.alarm")
 
@@ -180,13 +179,13 @@ policies:
             self.manager.resource_type.service = 'cesv2'
             client = self.manager.get_client()
             response = client.batch_enable_alarm_rules(batch_enable_alarm_rule_request)
-            log.info(f"Batch start alarm, response: {response}")
+            #log.info(f"Batch start alarm, response: {response}")
             self.manager.resource_type.service = 'smn'
             client = self.manager.get_client()
             for topic_urn in params['notification_list']:
                 publish_message_request.topic_urn = topic_urn,
                 response = client.publish_message(publish_message_request)
-            log.info(f"Message send, response: {response}")
+                log.info(f"Message send, response: {response}")
         except exceptions.ClientRequestException as e:
             log.error(f"Batch start alarm failed: {e.error_msg}")
         return response
