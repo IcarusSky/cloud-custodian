@@ -15,6 +15,7 @@ from huaweicloudsdksmn.v2 import PublishMessageRequest, PublishMessageRequestBod
 from c7n.actions import BaseAction
 from c7n.filters.missing import Missing
 from c7n.utils import type_schema
+from tools.c7n_huaweicloud.c7n_huaweicloud.filters.ces import AlarmNameSpaceAndMetricFilter
 
 log = logging.getLogger("custodian.huaweicloud.resources.alarm")
 
@@ -29,6 +30,7 @@ class Alarm(QueryResourceManager):
 
 
 Alarm.filter_registry.register('missing', Missing)
+Alarm.filter_registry.register('alarm-namespace-metric', AlarmNameSpaceAndMetricFilter)
 
 
 @Alarm.action_registry.register("alarm-update-notification")

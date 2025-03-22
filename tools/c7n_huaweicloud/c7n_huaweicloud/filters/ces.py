@@ -3,10 +3,7 @@
 
 from c7n.filters import Filter
 from c7n.utils import type_schema
-from tools.c7n_huaweicloud.c7n_huaweicloud.resources.ces import Alarm
 
-
-@Alarm.filter_registry.register('alarm-namespace-metric')
 class AlarmNameSpaceAndMetricFilter(Filter):
     schema = type_schema(
         'alarm-namespace-metric',
