@@ -216,7 +216,7 @@ policies:
                     value: []
                     op: eq
               - type: value
-                key: "contains(policies[].metric_name, 'modifyVpc')"
+                key: "contains(policies[].metric_name, 'deleteVpc')"
                 value: true
                 op: eq
               - type: value
@@ -276,7 +276,6 @@ policies:
     def process(self, resources):
         params = self.data.get('parameters', {})
         action_type = params.get('action_type', 'notification')
-        # 告警更新切换到V1接口
         client = self.manager.get_client()
         request = CreateAlarmRulesRequest()
 
@@ -384,6 +383,172 @@ policies:
             namespace="SYS.VPC",
             description="alarm-vpc-change",
             name="alarm-vpc-change",
+            resources=[]
+        )
+        try:
+            response = client.create_alarm_rules(request)
+            log.info(f"Create alarm {response}")
+        except exceptions.ClientRequestException as e:
+            log.error(f"Create alarm failed: {e.error_msg}")
+
+@Alarm.action_registry.register("create-kms-event-alarm-rule")
+class CreateKmsEventAlarmRule(BaseAction):
+    """Check CES isn't configured KMS change alarm rule.
+
+    :Example:
+
+    .. code-block:: yaml
+
+policies:
+  - name: alarm-kms-check
+    resource: huaweicloud.alarm
+    filters:
+        - type: missing
+          policy:
+            resource: huaweicloud.alarm
+            filters:
+              - type: value
+                key: enabled
+                value: true
+                op: eq
+              - type: value
+                key: type
+                value: "EVENT.SYS"
+                op: eq
+              - type: value
+                key: namespace
+                value: "SYS.KMS"
+                op: eq
+              - type: list-item
+                key: resources
+                attrs:
+                  - type: value
+                    key: "dimensions"
+                    value: []
+                    op: eq
+              - type: value
+                key: "contains(policies[].metric_name, 'retireGrant')"
+                value: true
+                op: eq
+              - type: value
+                key: "contains(policies[].metric_name, 'revokeGrant')"
+                value: true
+                op: eq
+              - type: value
+                key: "contains(policies[].metric_name, 'disableKey')"
+                value: true
+                op: eq
+              - type: value
+                key: "contains(policies[].metric_name, 'scheduleKeyDeletion')"
+                value: true
+                op: eq
+    actions:
+      - type: create-kms-event-alarm-rule
+        parameters:
+          action_type: "notification"
+          notification_list:
+            - "urn:smn:cn-north-4:e196f2790965422f80502748f4d58649:CES_notification_group_kNrnzmm0J"
+
+    """
+
+    schema = type_schema(
+        "create-kms-event-alarm-rule",
+        required=["parameters"],
+        **{
+            "parameters": {
+                "type": "object",
+                "required": ["notification_list", "action_type"],
+                "properties": {
+                    "notification_list": {
+                        "type": "array",
+                        "items": {"type": "string"}
+                    },
+                    "action_type": {
+                        "type": "string",
+                        "enum": ["notification", "autoscaling"]
+                    }
+                }
+            }
+        }
+    )
+
+    def process(self, resources):
+        params = self.data.get('parameters', {})
+        action_type = params.get('action_type', 'notification')
+        client = self.manager.get_client()
+        request = CreateAlarmRulesRequest()
+
+        list_ok_notifications_body = [
+            Notification(
+                type=action_type,
+                notification_list=params['notification_list']
+            )
+        ]
+        list_alarm_notifications_body = [
+            Notification(
+                type=action_type,
+                notification_list=params['notification_list']
+            )
+        ]
+        list_policies_body = [
+            Policy(
+                metric_name="retireGrant",
+                period=0,
+                filter="average",
+                comparison_operator=">=",
+                value=1,
+                unit="count",
+                count=1,
+                suppress_duration=0,
+                level=2
+            ),
+            Policy(
+                metric_name="revokeGrant",
+                period=0,
+                filter="average",
+                comparison_operator=">=",
+                value=1,
+                unit="count",
+                count=1,
+                suppress_duration=0,
+                level=2
+            ),
+            Policy(
+                metric_name="disableKey",
+                period=0,
+                filter="average",
+                comparison_operator=">=",
+                value=1,
+                unit="count",
+                count=1,
+                suppress_duration=0,
+                level=2
+            ),
+            Policy(
+                metric_name="scheduleKeyDeletion",
+                period=0,
+                filter="average",
+                comparison_operator=">=",
+                value=1,
+                unit="count",
+                count=1,
+                suppress_duration=0,
+                level=2
+            )
+        ]
+        request.body = PostAlarmsReqV2(
+            notification_enabled=True,
+            enabled=True,
+            enterprise_project_id="0",
+            notification_end_time="23:59",
+            notification_begin_time="00:00",
+            ok_notifications=list_ok_notifications_body,
+            alarm_notifications=list_alarm_notifications_body,
+            type=AlarmType.EVENT_SYS,
+            policies=list_policies_body,
+            namespace="SYS.KMS",
+            description="alarm-kms-change",
+            name="alarm-kms-change",
             resources=[]
         )
         try:
