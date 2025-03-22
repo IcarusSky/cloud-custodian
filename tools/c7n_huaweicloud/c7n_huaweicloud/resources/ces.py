@@ -171,7 +171,7 @@ policies:
         message = params.get('message', 'message')
         id_list = '\n'.join([f"- {id}" for id in list_alarm_ids])
         message += f"\nalarm list:\n{id_list}"
-        message += f"\nregion: {self.region}"
+        message += f"\nregion: {self.manager.region}"
         publish_message_request = PublishMessageRequest()
         publish_message_request.body = PublishMessageRequestBody(
             subject=subject,
