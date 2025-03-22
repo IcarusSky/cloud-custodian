@@ -548,7 +548,7 @@ policies:
           policy:
             resource: huaweicloud.alarm
             filters:
-              - type: huawei-alarm-metric
+              - type: alarm-namespace-metric
                 namespaces: ["SYS.KMS"]
                 metric_names: ["retireGrant", "disableKey"]
     actions:
