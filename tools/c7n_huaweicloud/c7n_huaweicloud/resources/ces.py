@@ -25,7 +25,7 @@ class Alarm(QueryResourceManager):
         service = 'ces'
         enum_spec = ("list_alarm_rules", 'alarms', 'offset')
         id = 'alarm_id'
-        tag_resource_type = 'dedicated-host-tags'
+        tag_resource_type = 'ces-alarm-tags'
 
 
 Alarm.filter_registry.register('missing', Missing)
