@@ -57,7 +57,7 @@ class AlarmTest(BaseTest):
         },
             session_factory=factory)
         resources = p.run()
-        self.assertEqual(resources.get("alarm_id")[0], "al17427965140272BWJEvgrp")
+        self.assertEqual(resources[0]["alarm_id"], "al17427965140272BWJEvgrp")
     #
     # def test_create_kms_event_alarm_rule(self):
     #     factory = self.replay_flight_data('create_kms_event_alarm_rule')
