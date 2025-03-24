@@ -13,6 +13,7 @@ from huaweicloudsdkcore.exceptions import exceptions
 from huaweicloudsdksmn.v2 import PublishMessageRequest, PublishMessageRequestBody
 
 from c7n.actions import BaseAction
+from c7n.exceptions import PolicyValidationError
 from c7n.filters.missing import Missing
 from c7n.utils import type_schema, local_session
 from tools.c7n_huaweicloud.c7n_huaweicloud.filters.ces import AlarmNameSpaceAndMetricFilter
@@ -580,6 +581,9 @@ policies:
             }
         }
     )
+    def validate(self):
+        if not (self.data.get('subject') and self.data.get('message') and len(self.data.get('notification_list')) == 0):
+            raise PolicyValidationError("Can not create smn message when parameter is error")
 
     def process(self, resources):
         params = self.data.get('parameters', {})
