@@ -66,8 +66,8 @@ interactions:
       - ap-southeat-1
       X-Sdk-Date:
       - 20250320T063810Z
-    method: PUT
-    uri: https://ces.ap-southeast-1.myhuaweicloud.com/v2/ap-southeat-1/alarms/al17427965140272BWJEvgrp/notifications
+    method: GET
+    uri: https://ces.ap-southeast-1.myhuaweicloud.com/V1.0/ap-southeat-1/alarms/al17427965140272BWJEvgrp
   response:
     body:
       string: null
