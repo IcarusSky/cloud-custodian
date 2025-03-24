@@ -23,7 +23,7 @@ log = logging.getLogger("custodian.huaweicloud.resources.alarm")
 @resources.register('alarm')
 class Alarm(QueryResourceManager):
     class resource_type(TypeInfo):
-        service = 'cesv2'
+        service = 'ces'
         enum_spec = ("list_alarm_rules", 'alarms', 'offset')
         id = 'alarm_id'
         tag = True
@@ -83,29 +83,29 @@ policies:
         params = self.data.get('parameters', {})
         action_type = params.get('action_type', 'notification')
         response = None
-        # 告警更新切换到V1接口
-        client = local_session(self.manager.session_factory).client('cesv1')
-        request = UpdateAlarmRequest()
+        client = local_session(self.manager.session_factory).client('ces')
+        request = UpdateAlarmNotificationsRequest()
         request.alarm_id = resource["id"]
-        list_ok_actions_body = [
-            AlarmActions(
+        request = UpdateAlarmNotificationsRequest()
+        list_ok_notifications_body = [
+            Notification(
                 type=action_type,
                 notification_list=params['notification_list']
             )
         ]
-        list_alarm_actions_body = [
-            AlarmActions(
-                type="notification",
+        list_alarm_notifications_body = [
+            Notification(
+                type=action_type,
                 notification_list=params['notification_list']
             )
         ]
-        request.body = UpdateAlarmRequestBody(
-            ok_actions=list_ok_actions_body,
-            alarm_actions=list_alarm_actions_body,
-            alarm_action_enabled=True
+        request.body = PutAlarmNotificationReq(
+            ok_notifications=list_ok_notifications_body,
+            alarm_notifications=list_alarm_notifications_body,
+            notification_enabled=True
         )
         try:
-            response = client.update_alarm(request)
+            response = client.update_alarm_notifications(request)
             log.info(f"Update alarm notification {response}")
         except exceptions.ClientRequestException as e:
             log.error(f"Update alarm notification failed: {e.error_msg}")
@@ -178,7 +178,7 @@ policies:
             message=message
         )
         try:
-            client = local_session(self.manager.session_factory).client('cesv2')
+            client = local_session(self.manager.session_factory).client('ces')
             batch_enable_alarm_rule_response = client.batch_enable_alarm_rules(batch_enable_alarm_rule_request)
             log.info(f"Batch start alarm, response: {batch_enable_alarm_rule_response}")
             client = local_session(self.manager.session_factory).client('smn')
@@ -277,7 +277,7 @@ policies:
     def process(self, resources):
         params = self.data.get('parameters', {})
         action_type = params.get('action_type', 'notification')
-        client = local_session(self.manager.session_factory).client('cesv2')
+        client = local_session(self.manager.session_factory).client('ces')
         request = CreateAlarmRulesRequest()
 
         list_ok_notifications_body = [
@@ -445,7 +445,7 @@ policies:
     def process(self, resources):
         params = self.data.get('parameters', {})
         action_type = params.get('action_type', 'notification')
-        client = local_session(self.manager.session_factory).client('cesv2')
+        client = local_session(self.manager.session_factory).client('ces')
         request = CreateAlarmRulesRequest()
 
         list_ok_notifications_body = [
@@ -697,7 +697,7 @@ policies:
     def process(self, resources):
         params = self.data.get('parameters', {})
         action_type = params.get('action_type', 'notification')
-        client = local_session(self.manager.session_factory).client('cesv2')
+        client = local_session(self.manager.session_factory).client('ces')
         request = CreateAlarmRulesRequest()
 
         list_ok_notifications_body = [

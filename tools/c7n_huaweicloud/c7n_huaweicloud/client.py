@@ -20,12 +20,14 @@ from huaweicloudsdktms.v1 import TmsClient
 from huaweicloudsdktms.v1.region.tms_region import TmsRegion
 from huaweicloudsdkdeh.v1 import DeHClient, ListDedicatedHostsRequest
 from huaweicloudsdkdeh.v1.region.deh_region import DeHRegion
-from huaweicloudsdkces.v1 import CesClient as CesV1Client
-from huaweicloudsdkces.v2 import CesClient as CesV2Client, ListAlarmRulesRequest
-from huaweicloudsdkces.v1.region.ces_region import CesRegion as CesV1Region
-from huaweicloudsdkces.v2.region.ces_region import CesRegion as CesV2Region
+from huaweicloudsdkces.v2 import CesClient, ListAlarmRulesRequest
+from huaweicloudsdkces.v2.region.ces_region import CesRegion
 from huaweicloudsdksmn.v2 import SmnClient
 from huaweicloudsdksmn.v2.region.smn_region import SmnRegion
+from huaweicloudsdktms.v1 import TmsClient
+from huaweicloudsdktms.v1.region.tms_region import TmsRegion
+from huaweicloudsdkvpc.v2 import VpcClient, ListVpcsRequest
+from huaweicloudsdkvpc.v2.region.vpc_region import VpcRegion
 
 log = logging.getLogger('custodian.huaweicloud.client')
 
@@ -93,15 +95,10 @@ class Session:
                 .with_credentials(credentials) \
                 .with_region(DeHRegion.value_of(self.region)) \
                 .build()
-        elif service == 'cesv1':
-            client = CesV1Client.new_builder() \
+        elif service == 'ces':
+            client = CesClient.new_builder() \
                 .with_credentials(credentials) \
-                .with_region(CesV1Region.value_of(self.region)) \
-                .build()
-        elif service == 'cesv2':
-            client = CesV2Client.new_builder() \
-                .with_credentials(credentials) \
-                .with_region(CesV2Region.value_of(self.region)) \
+                .with_region(CesRegion.value_of(self.region)) \
                 .build()
         elif service == 'smn':
             client = SmnClient.new_builder() \
@@ -120,9 +117,7 @@ class Session:
             request = ShowTrackerConfigRequest()
         elif service == 'deh':
             request = ListDedicatedHostsRequest()
-        elif service == 'cesv1':
-            request = ListAlarmRulesRequest()
-        elif service == 'cesv2':
+        elif service == 'ces':
             request = ListAlarmRulesRequest()
 
         return request
