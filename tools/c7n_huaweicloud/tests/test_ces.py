@@ -27,7 +27,10 @@ class AlarmTest(BaseTest):
             }],
             "actions": [{
                 "type": "alar-update-notification",
-                "notification_list": ["urn:smn:cn-north-4:xxxxx:CES_notification_xxxxxxx"]
+                "parameters": {
+                    "action_type": "notification",
+                    "notification_list": ["urn:smn:cn-north-4:xxxxx:CES_notification_xxxxxxx"]
+                }
             }]
         },
             session_factory=factory)
