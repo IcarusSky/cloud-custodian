@@ -13,7 +13,6 @@ from huaweicloudsdkcore.exceptions import exceptions
 from huaweicloudsdksmn.v2 import PublishMessageRequest, PublishMessageRequestBody
 
 from c7n.actions import BaseAction
-from c7n.exceptions import PolicyValidationError
 from c7n.filters.missing import Missing
 from c7n.utils import type_schema, local_session
 from tools.c7n_huaweicloud.c7n_huaweicloud.filters.ces import AlarmNameSpaceAndMetricFilter
@@ -174,8 +173,7 @@ policies:
         id_list = '\n'.join([f"- {alarm_id}" for alarm_id in list_alarm_ids])
         message += f"\nalarm list:\n{id_list}"
         message += f"\nregion: {os.getenv('HUAWEI_DEFAULT_REGION')}"
-        publish_message_request = PublishMessageRequest()
-        publish_message_request.body = PublishMessageRequestBody(
+        body = PublishMessageRequestBody(
             subject=subject,
             message=message
         )
@@ -185,7 +183,7 @@ policies:
             log.info(f"Batch start alarm, response: {batch_enable_alarm_rule_response}")
             client = local_session(self.manager.session_factory).client('smn')
             for topic_urn in params['notification_list']:
-                publish_message_request.topic_urn = topic_urn,
+                publish_message_request = PublishMessageRequest(topic_urn = topic_urn, body = body)
                 log.info(f"Message send, request: {publish_message_request}")
                 publish_message_response = client.publish_message(publish_message_request)
                 log.info(f"Message send, response: {publish_message_response}")
@@ -581,9 +579,6 @@ policies:
             }
         }
     )
-    def validate(self):
-        if not self.data.get('subject') and  not self.data.get('message') and len(self.data.get('notification_list')) == 0:
-            raise PolicyValidationError("Can not create smn message when parameter is error")
 
     def process(self, resources):
         params = self.data.get('parameters', {})
