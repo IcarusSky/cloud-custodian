@@ -171,7 +171,7 @@ policies:
         params = self.data.get('parameters', {})
         subject = params.get('subject', 'subject')
         message = params.get('message', 'message')
-        id_list = '\n'.join([f"- {id}" for id in list_alarm_ids])
+        id_list = '\n'.join([f"- {alarm_id}" for alarm_id in list_alarm_ids])
         message += f"\nalarm list:\n{id_list}"
         message += f"\nregion: {os.getenv('HUAWEI_DEFAULT_REGION')}"
         publish_message_request = PublishMessageRequest()
