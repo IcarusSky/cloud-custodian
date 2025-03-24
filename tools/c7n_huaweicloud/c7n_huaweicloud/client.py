@@ -5,15 +5,21 @@ import logging
 import os
 import sys
 
-from huaweicloudsdkcore.auth.credentials import BasicCredentials
-from huaweicloudsdkecs.v2 import *
+from huaweicloudsdkconfig.v1 import ConfigClient, ShowTrackerConfigRequest
+from huaweicloudsdkconfig.v1.region.config_region import ConfigRegion
+from huaweicloudsdkcore.auth.credentials import BasicCredentials, GlobalCredentials
+from huaweicloudsdkecs.v2 import EcsClient
 from huaweicloudsdkecs.v2.region.ecs_region import EcsRegion
-from huaweicloudsdkevs.v2 import *
+from huaweicloudsdkevs.v2 import EvsClient, ListVolumesRequest
 from huaweicloudsdkevs.v2.region.evs_region import EvsRegion
-from huaweicloudsdkvpc.v2 import *
+from huaweicloudsdkiam.v3 import IamClient
+from huaweicloudsdkiam.v3.region.iam_region import IamRegion
+from huaweicloudsdkvpc.v2 import VpcClient, ListVpcsRequest
 from huaweicloudsdkvpc.v2.region.vpc_region import VpcRegion
-from huaweicloudsdktms.v1 import *
+from huaweicloudsdktms.v1 import TmsClient
 from huaweicloudsdktms.v1.region.tms_region import TmsRegion
+from huaweicloudsdkdeh.v1 import DeHClient, ListDedicatedHostsRequest
+from huaweicloudsdkdeh.v1.region.deh_region import DeHRegion
 from huaweicloudsdkces.v1 import CesClient as CesV1Client
 from huaweicloudsdkces.v2 import CesClient as CesV2Client, ListAlarmRulesRequest
 from huaweicloudsdkces.v1.region.ces_region import CesRegion as CesV1Region
@@ -43,8 +49,12 @@ class Session:
             log.error('No secret access key set. Specify a default via HUAWEI_SECRET_ACCESS_KEY')
             sys.exit(1)
 
+        self.tms_region = os.getenv('HUAWEI_DEFAULT_TMS_REGION')
+        if not self.tms_region:
+            self.tms_region = 'cn-north-4'
+
     def client(self, service):
-        credentials = BasicCredentials(self.ak, self.sk)
+        credentials = BasicCredentials(self.ak, self.sk, os.getenv('HUAWEI_PROJECT_ID'))
         if service == 'vpc':
             client = VpcClient.new_builder() \
                 .with_credentials(credentials) \
@@ -61,9 +71,27 @@ class Session:
                 .with_region(EvsRegion.value_of(self.region)) \
                 .build()
         elif service == 'tms':
+            globalCredentials = GlobalCredentials(self.ak, self.sk)
             client = TmsClient.new_builder() \
+                .with_credentials(globalCredentials) \
+                .with_region(TmsRegion.value_of(self.tms_region)) \
+                .build()
+        elif service == 'iam':
+            globalCredentials = GlobalCredentials(self.ak, self.sk)
+            client = IamClient.new_builder() \
+                .with_credentials(globalCredentials) \
+                .with_region(IamRegion.value_of(self.region)) \
+                .build()
+        elif service == 'config':
+            globalCredentials = GlobalCredentials(self.ak, self.sk)
+            client = ConfigClient.new_builder() \
+                .with_credentials(globalCredentials) \
+                .with_region(ConfigRegion.value_of(self.region)) \
+                .build()
+        elif service == 'deh':
+            client = DeHClient.new_builder() \
                 .with_credentials(credentials) \
-                .with_region(TmsRegion.value_of(self.region)) \
+                .with_region(DeHRegion.value_of(self.region)) \
                 .build()
         elif service == 'cesv1':
             client = CesV1Client.new_builder() \
@@ -88,6 +116,10 @@ class Session:
             request = ListVpcsRequest()
         elif service == 'evs':
             request = ListVolumesRequest()
+        elif service == 'config':
+            request = ShowTrackerConfigRequest()
+        elif service == 'deh':
+            request = ListDedicatedHostsRequest()
         elif service == 'cesv1':
             request = ListAlarmRulesRequest()
         elif service == 'cesv2':
