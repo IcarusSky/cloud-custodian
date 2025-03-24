@@ -246,6 +246,10 @@ policies:
                 op: eq
     actions:
       - type: create-kms-event-alarm-rule
+        parameters:
+          action_type: "notification"
+          notification_list:
+            - "urn:smn:cn-north-4:xxxxx:CES_notification_xxxxxxx"
       - type: notify-by-smn
         parameters:
           subject: "CES alarm not configured specified resource"
