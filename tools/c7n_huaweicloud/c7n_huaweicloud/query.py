@@ -83,7 +83,7 @@ class ResourceQuery:
             if res is not None:
                 for data in res:
                     data['id'] = data[m.id]
-                    data['tag_resource_type'] = m.tag_resource_type
+                    #data['tag_resource_type'] = m.tag_resource_type
 
             resources = resources + res
             if len(res) == limit:
