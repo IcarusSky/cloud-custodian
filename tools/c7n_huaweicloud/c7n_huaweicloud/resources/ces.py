@@ -586,13 +586,13 @@ policies:
         subject = params.get('subject', 'subject')
         message = params.get('message', 'message')
         message += f"\nregion: {os.getenv('HUAWEI_DEFAULT_REGION')}"
-        publish_message_request = PublishMessageRequest()
-        publish_message_request.body = PublishMessageRequestBody(
+        body = PublishMessageRequestBody(
             subject=subject,
             message=message
         )
         client = local_session(self.manager.session_factory).client('smn')
         for topic_urn in params['notification_list']:
+            publish_message_request = PublishMessageRequest(topic_urn=topic_urn, body=body)
             publish_message_request.topic_urn = topic_urn,
             log.info(f"Message send, request: {publish_message_request}")
             try:
