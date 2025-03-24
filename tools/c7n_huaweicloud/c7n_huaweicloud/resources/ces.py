@@ -246,10 +246,12 @@ policies:
                 op: eq
     actions:
       - type: create-kms-event-alarm-rule
+      - type: notify-by-smn
         parameters:
-          action_type: "notification"
+          subject: "CES alarm not configured specified resource"
+          message: "Currently, the Huawei Cloud CES system has not configured execution resource alarms. Please log in to the system to view the configuration."
           notification_list:
-            - "urn:smn:cn-north-4:e196f2790965422f80502748f4d58649:CES_notification_group_kNrnzmm0J"
+            - "urn:smn:cn-north-4:xxxxx:CES_notification_xxxxxxx"
 
     """
 
