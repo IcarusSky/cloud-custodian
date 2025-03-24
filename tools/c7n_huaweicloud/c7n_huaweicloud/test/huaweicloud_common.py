@@ -14,10 +14,10 @@ from c7n_huaweicloud.client import Session
 #load_resources()
 
 HUAWEICLOUD_CONFIG = {
-    'HUAWEI_DEFAULT_REGION': 'ap-southeast-1',
+    'HUAWEI_DEFAULT_REGION': 'cn-north-4',
     'HUAWEI_ACCESS_KEY_ID': 'access_key_id',
     'HUAWEI_SECRET_ACCESS_KEY': 'secret_access_key',
-    'HUAWEI_PROJECT_ID': 'ap-southeat-1',
+    'HUAWEI_PROJECT_ID': '01c537355e5e4241a8c213f626f68647',
 }
 
 DEFAULT_CASSETTE_FILE = "default.yaml"
