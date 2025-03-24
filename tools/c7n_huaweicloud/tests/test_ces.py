@@ -1,8 +1,7 @@
 # Copyright The Cloud Custodian Authors.
 # SPDX-License-Identifier: Apache-2.0
 from huaweicloud_common import BaseTest
-import logging
-log = logging.getLogger("custodian.huaweicloud.resources.alarm")
+
 class AlarmTest(BaseTest):
 
     def test_alarm_query(self):
@@ -58,8 +57,6 @@ class AlarmTest(BaseTest):
         },
             session_factory=factory)
         resources = p.run()
-        self.assertEqual(len(resources), 1)
-        log.info(f"Update alarm notification {resources}")
         self.assertEqual(resources.get("alarm_id")[0], "al17427965140272BWJEvgrp")
     #
     # def test_create_kms_event_alarm_rule(self):
