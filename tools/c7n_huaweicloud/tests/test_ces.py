@@ -75,7 +75,7 @@ class AlarmTest(BaseTest):
         },
             session_factory=factory)
         resources = p.run()
-        self.assertEqual(len(resources), 0)
+        self.assertEqual(len(resources), 1)
 
     def test_create_obs_event_alarm_rule(self):
         factory = self.replay_flight_data('create_obs_event_alarm_rule')
@@ -92,7 +92,7 @@ class AlarmTest(BaseTest):
         },
             session_factory=factory)
         resources = p.run()
-        self.assertEqual(len(resources), 0)
+        self.assertEqual(len(resources), 1)
 
     def test_notif_by_smn(self):
         factory = self.replay_flight_data('notif_by_smn')
@@ -128,4 +128,4 @@ class AlarmTest(BaseTest):
         },
             session_factory=factory)
         resources = p.run()
-        self.assertEqual(len(resources), 0)
+        self.assertEqual(len(resources), 1)
