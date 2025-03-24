@@ -7,7 +7,6 @@ import os
 from c7n_huaweicloud.actions.base import HuaweiCloudBaseAction
 from c7n_huaweicloud.provider import resources
 from c7n_huaweicloud.query import QueryResourceManager, TypeInfo
-from huaweicloudsdkces.v1 import *
 from huaweicloudsdkces.v2 import *
 from huaweicloudsdkcore.exceptions import exceptions
 from huaweicloudsdksmn.v2 import PublishMessageRequest, PublishMessageRequestBody
@@ -86,7 +85,6 @@ policies:
         client = local_session(self.manager.session_factory).client('ces')
         request = UpdateAlarmNotificationsRequest()
         request.alarm_id = resource["id"]
-        request = UpdateAlarmNotificationsRequest()
         list_ok_notifications_body = [
             Notification(
                 type=action_type,
