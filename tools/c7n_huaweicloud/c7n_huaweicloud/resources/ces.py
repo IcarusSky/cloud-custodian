@@ -53,7 +53,7 @@ policies:
         parameters:
           action_type: "notification"
           notification_list:
-            - "urn:smn:cn-north-4:xxxxxxxxxxx:ces_notification_group_xxxxx"
+            - "urn:smn:cn-north-4:xxxxx:CES_notification_xxxxxxx"
 
     """
 
@@ -423,7 +423,7 @@ policies:
         parameters:
           action_type: "notification"
           notification_list:
-            - "urn:smn:cn-north-4:e196f2790965422f80502748f4d58649:CES_notification_group_kNrnzmm0J"
+            - "urn:smn:cn-north-4:xxxxx:CES_notification_xxxxxxx"
 
     """
 
@@ -675,7 +675,7 @@ policies:
         parameters:
           action_type: "notification"
           notification_list:
-            - "urn:smn:cn-north-4:e196f2790965422f80502748f4d58649:CES_notification_group_kNrnzmm0J"
+            - "urn:smn:cn-north-4:xxxxx:CES_notification_xxxxxxx"
 
     """
 
