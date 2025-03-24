@@ -70,7 +70,7 @@ interactions:
     uri: https://ces.ap-southeast-1.myhuaweicloud.com/v2/ap-southeat-1/alarms/al17427965140272BWJEvgrp/notifications
   response:
     body:
-      string: null
+      string: ''
     headers:
       Connection:
       - keep-alive
@@ -94,5 +94,7 @@ interactions:
       - 078d8acc403c245ea4aa7c2d6991fdf3
       X-XSS-Protection:
       - 1; mode=block;
-    status: {code: 200, message: OK}
+    status:
+      code: 204
+      message: OK
 version: 1
