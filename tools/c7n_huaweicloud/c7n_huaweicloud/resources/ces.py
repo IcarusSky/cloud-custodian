@@ -14,7 +14,7 @@ from huaweicloudsdksmn.v2 import PublishMessageRequest, PublishMessageRequestBod
 
 from c7n.actions import BaseAction
 from c7n.filters.missing import Missing
-from c7n.utils import type_schema
+from c7n.utils import type_schema, local_session
 from tools.c7n_huaweicloud.c7n_huaweicloud.filters.ces import AlarmNameSpaceAndMetricFilter
 
 log = logging.getLogger("custodian.huaweicloud.resources.alarm")
@@ -84,8 +84,7 @@ policies:
         action_type = params.get('action_type', 'notification')
         response = None
         # 告警更新切换到V1接口
-        self.manager.resource_type.service = 'cesv1'
-        client = self.manager.get_client()
+        client = local_session(self.manager.session_factory).client('cesv1')
         request = UpdateAlarmRequest()
         request.alarm_id = resource["id"]
         list_ok_actions_body = [
@@ -180,12 +179,10 @@ policies:
             message=message
         )
         try:
-            self.manager.resource_type.service = 'cesv2'
-            client = self.manager.get_client()
+            client = local_session(self.manager.session_factory).client('cesv2')
             batch_enable_alarm_rule_response = client.batch_enable_alarm_rules(batch_enable_alarm_rule_request)
             log.info(f"Batch start alarm, response: {batch_enable_alarm_rule_response}")
-            self.manager.resource_type.service = 'smn'
-            client = self.manager.get_client()
+            client = local_session(self.manager.session_factory).client('smn')
             for topic_urn in params['notification_list']:
                 publish_message_request.topic_urn = topic_urn,
                 log.info(f"Message send, request: {publish_message_request}")
@@ -281,7 +278,7 @@ policies:
     def process(self, resources):
         params = self.data.get('parameters', {})
         action_type = params.get('action_type', 'notification')
-        client = self.manager.get_client()
+        client = local_session(self.manager.session_factory).client('cesv2')
         request = CreateAlarmRulesRequest()
 
         list_ok_notifications_body = [
@@ -449,7 +446,7 @@ policies:
     def process(self, resources):
         params = self.data.get('parameters', {})
         action_type = params.get('action_type', 'notification')
-        client = self.manager.get_client()
+        client = local_session(self.manager.session_factory).client('cesv2')
         request = CreateAlarmRulesRequest()
 
         list_ok_notifications_body = [
@@ -594,8 +591,7 @@ policies:
             subject=subject,
             message=message
         )
-        self.manager.resource_type.service = 'smn'
-        client = self.manager.get_client()
+        client = local_session(self.manager.session_factory).client('smn')
         for topic_urn in params['notification_list']:
             publish_message_request.topic_urn = topic_urn,
             log.info(f"Message send, request: {publish_message_request}")
@@ -703,7 +699,7 @@ policies:
     def process(self, resources):
         params = self.data.get('parameters', {})
         action_type = params.get('action_type', 'notification')
-        client = self.manager.get_client()
+        client = local_session(self.manager.session_factory).client('cesv2')
         request = CreateAlarmRulesRequest()
 
         list_ok_notifications_body = [
