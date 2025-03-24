@@ -98,6 +98,8 @@ policies:
             )
         ]
         request.body = PutAlarmNotificationReq(
+            notification_end_time="23:59",
+            notification_begin_time="00:00",
             ok_notifications=list_ok_notifications_body,
             alarm_notifications=list_alarm_notifications_body,
             notification_enabled=True
