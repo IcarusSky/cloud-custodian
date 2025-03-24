@@ -83,8 +83,7 @@ class ResourceQuery:
             if res is not None:
                 for data in res:
                     data['id'] = data[m.id]
-                    # if 'tag_resource_type' in data:
-                    #     data['tag_resource_type'] = m.tag_resource_type  # 或设置其他默认值
+                    data['tag_resource_type'] = m.tag_resource_type
 
             resources = resources + res
             if len(res) == limit:
