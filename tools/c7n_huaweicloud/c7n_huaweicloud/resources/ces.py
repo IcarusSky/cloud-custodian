@@ -582,7 +582,7 @@ policies:
         }
     )
     def validate(self):
-        if not (self.data.get('subject') and self.data.get('message') and len(self.data.get('notification_list')) == 0):
+        if not self.data.get('subject') and  not self.data.get('message') and len(self.data.get('notification_list')) == 0:
             raise PolicyValidationError("Can not create smn message when parameter is error")
 
     def process(self, resources):
