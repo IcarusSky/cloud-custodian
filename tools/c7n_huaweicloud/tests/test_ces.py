@@ -26,7 +26,7 @@ class AlarmTest(BaseTest):
                 "value": "false"
             }],
             "actions": [{
-                "type": "alar-update-notification",
+                "type": "alarm-update-notification",
                 "parameters": {
                     "action_type": "notification",
                     "notification_list": ["urn:smn:cn-north-4:xxxxx:CES_notification_xxxxxxx"]
