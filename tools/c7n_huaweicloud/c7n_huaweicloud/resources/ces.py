@@ -590,12 +590,11 @@ policies:
             subject=subject,
             message=message
         )
-        client = local_session(self.manager.session_factory).client('smn')
         for topic_urn in params['notification_list']:
             publish_message_request = PublishMessageRequest(topic_urn=topic_urn, body=body)
-            publish_message_request.topic_urn = topic_urn,
             log.info(f"Message send, request: {publish_message_request}")
             try:
+                client = local_session(self.manager.session_factory).client('smn')
                 publish_message_response = client.publish_message(publish_message_request)
                 log.info(f"Message send, response: {publish_message_response}")
             except exceptions.ClientRequestException as e:
