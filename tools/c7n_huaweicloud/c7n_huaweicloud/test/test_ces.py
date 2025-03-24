@@ -8,7 +8,17 @@ class AlarmTest(BaseTest):
     def test_alarm_query(self):
         factory = self.replay_flight_data('ces_alarm_query')
         p = self.load_policy({
-             'name': 'all-volumes',
+             'name': 'all-alarms',
+             'resource': 'huaweicloud.alarm'},
+            session_factory=factory)
+        resources = p.run()
+        self.assertEqual(len(resources), 1)
+        self.assertEqual(resources[0]['alarm_id'], "al17427965140272BWJEvgrp")
+
+    def test_alarm_update_notification(self):
+        factory = self.replay_flight_data('ces_alarm_update_notification')
+        p = self.load_policy({
+             'name': 'ces-alarm-have-smn-check',
              'resource': 'huaweicloud.alarm'},
             session_factory=factory)
         resources = p.run()
