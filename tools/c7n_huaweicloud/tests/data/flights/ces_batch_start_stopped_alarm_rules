@@ -66,11 +66,11 @@ interactions:
       - ap-southeat-1
       X-Sdk-Date:
       - 20250320T063810Z
-    method: GET
-    uri: https://ces.ap-southeast-1.myhuaweicloud.com/V1.0/ap-southeat-1/alarms/al17427965140272BWJEvgrp
+    method: POST
+    uri: https://ces.ap-southeast-1.myhuaweicloud.com/v2/ap-southeat-1/alarms/action
   response:
     body:
-      string: null
+      string: '{"alarm_ids": ["al17427965140272BWJEvgrp"]}'
     headers:
       Connection:
       - keep-alive

@@ -37,15 +37,29 @@ class AlarmTest(BaseTest):
         resources = p.run()
         self.assertEqual(len(resources), 0)
 
-    # def test_batch_start_stopped_alarm_rules(self):
-    #     factory = self.replay_flight_data('ces_batch_start_stopped_alarm_rules')
-    #     p = self.load_policy({
-    #         'name': 'batch-start-stopped-alarm-rules',
-    #         'resource': 'huaweicloud.alarm'},
-    #         session_factory=factory)
-    #     resources = p.run()
-    #     self.assertEqual(len(resources), 1)
-    #     self.assertEqual(resources[0]['alarm_id'], "al17427965140272BWJEvgrp")
+    def test_batch_start_stopped_alarm_rules(self):
+        factory = self.replay_flight_data('ces_batch_start_stopped_alarm_rules')
+        p = self.load_policy({
+            'name': 'batch-start-stopped-alarm-rules',
+            'resource': 'huaweicloud.alarm',
+            "filters": [{
+                "type": "value",
+                "key": "enabled",
+                "value": "false"
+            }],
+            "actions": [{
+                "type": "batch-start-stopped-alarm-rules",
+                "parameters": {
+                    "message": "You have the following alarms that have not been started, please check the system. The tasks have been started, please log in to the system and check again.",
+                    "subject": "CES alarm not activated Check email",
+                    "notification_list": ["urn:smn:cn-north-4:xxxxx:CES_notification_xxxxxxx"]
+                }
+            }]
+        },
+            session_factory=factory)
+        resources = p.run()
+        self.assertEqual(len(resources), 1)
+        self.assertEqual(resources.get("alarm_id")[0], "al17427965140272BWJEvgrp")
     #
     # def test_create_kms_event_alarm_rule(self):
     #     factory = self.replay_flight_data('create_kms_event_alarm_rule')
